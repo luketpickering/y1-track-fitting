@@ -3,6 +3,18 @@ import matplotlib.pyplot as plt
 from math import sqrt, pow, asin, cos, sin, pi
 from sys import argv
 
+def drift_distance(phi, tdc):
+    rtn = (phi*tdc)
+    if rtn < 0:
+        raise ValueError
+    return rtn
+
+def prop_track_distance(x0, y0, grad, kintercept):
+    rtn = abs(y0 - grad*x0 + kintercept)/sqrt(1 + grad*grad)
+    if rtn < 0:
+        raise ValueError
+    return rtn
+
 #C = (R,X,Y)
 def get_sinang_com_tan_ext(C1,C2):
     dx = C2[1] - C1[1]
@@ -14,6 +26,8 @@ def get_sinang_com_tan_int(C1,C2):
     dx = C2[1] - C1[1]
     dy = C2[2] - C1[2]
     sinal = (C2[0] + C1[0])/sqrt(dx*dx + dy*dy)
+    if sinal < -1.0:
+        raise ValueError
     return sinal
 
 def rot_vector(V,theta):
@@ -44,12 +58,12 @@ def cotangents(C1, C2):
     if len < (C1[0] + C2[0]):
         raise ValueError
     
-    print circs
+    #print circs
     
     sin_ext = get_sinang_com_tan_ext(circs[0],circs[1])
     sin_int = get_sinang_com_tan_int(circs[0],circs[1])
     
-    print sin_ext, sin_int
+    #print sin_ext, sin_int
     
     th_ext = asin(sin_ext)
     th_int = asin(sin_int)
@@ -73,6 +87,8 @@ def get_pvects_cotangents(C1,C2):
     sin_ext = get_sinang_com_tan_ext(circs[0],circs[1])
     sin_int = get_sinang_com_tan_int(circs[0],circs[1])
 
+    #print sin_ext, sin_int
+    
     th_ext = asin(sin_ext)
     th_int = asin(sin_int)
     c2c_uv = get_unit_vect_2C(circs[0],circs[1])
@@ -86,9 +102,9 @@ def get_pvects_cotangents(C1,C2):
     A = vadd(vscale(ah,circs[0][0]), (circs[0][1],circs[0][2]))
     bh = rot_vector(c2c_uv, -1.0*(th_ext + nty_rad))
     B = vadd(vscale(bh,circs[0][0]), (circs[0][1],circs[0][2]))
-    ch = rot_vector(c2c_uv, nty_rad - th_int )
+    ch = rot_vector(c2c_uv, th_int - nty_rad )
     C = vadd(vscale(ch,circs[0][0]), (circs[0][1],circs[0][2]))
-    dh = rot_vector(c2c_uv, th_int - nty_rad )
+    dh = rot_vector(c2c_uv, nty_rad - th_int )
     D = vadd(vscale(dh,circs[0][0]), (circs[0][1],circs[0][2]))
 
     return (A,B,C,D)
@@ -99,28 +115,111 @@ def get_x_y_lists_P(P1,P2):
 def push_p_along_v_by_dx(P1, uv, dx):
     dy = uv[1] * (dx/uv[0])
     return vadd(P1, (dx,dy))
+
+def get_line_eq_uv_pt(uv,pt):
+    m = uv[1]/uv[0]
+    c = pt[1] - m* pt[0]
+    return (m, c)
+def get_xy_from_m_c(ln):
+    return [[0.0,80000.0],[ln[1],ln[0]*80000.0 + ln[1]]]
+
 def circ_c(C1):
     return (C1[1],C1[2])
 
-phi = 26.0*0.0001
-C1 = (142.0*phi,2.0, 3.0)
-C2 = (111.0*phi,7.0,4.5)
+def construct_micron_grid():
+    grid = []
+    size = 8
+    for i in range(size):
+            grid.append([ ( y*10000.0 if not i%2 else (y*10000.0 + 5000.0) ) for y in range(size)])
+    return grid
 
-ct = cotangents(C1,C2)
+def line_miss_all(circs, ln):
+    for i,c in enumerate(circs):
+        if i == 0 or i == 7:
+            continue
+        leng = prop_track_distance(c[1],c[2],ln[0], -1.0*ln[1])
+        if leng < c[0]:
+            break
+    else:
+        return True
+    return False
+
+grid = construct_micron_grid()
+data_file = None
+try:
+    data_file = open(argv[1], 'r')
+except:
+    print "Invalid Data file"
+    exit()
+else:
+    swx,swy = [], []
+    for _i in range(len(grid)):
+        for _y in grid[_i]:
+            swx.append(_i*10000.0)
+            swy.append(_y)
+    plt.scatter(swx,swy, marker="*", color='red')
+
+i_phi = 38.0
+
+CA = []
+for line in data_file:
+    raw = line.split()
+    CA.append([
+    int(raw[2])*i_phi,
+    int(raw[0])*10000.0,
+    grid[int(raw[0])][int(raw[1])]
+    ])
+data_file.close()
 
 def cmp(x):
         return x[0]
-circs = sorted([C1,C2], key=cmp)
+circs = sorted([CA[0],CA[7]], key=cmp)
 
-dx = circs[0][1] - 1.0
+n_phi = i_phi
+one_line = 0
+while (one_line != 1) and ( n_phi > 0.05):
+    print "Running for phi = ", n_phi
+    o_phi = n_phi
+    n_phi -= 0.05
+    for c in CA:
+        c[0] = c[0]*n_phi/o_phi
+    ct = cotangents(circs[0],circs[1])
 
-ABCD = get_pvects_cotangents(C1,C2)
+    dx = circs[0][1] - circs[1][1]
 
-A_C2 = push_p_along_v_by_dx(ABCD[0],ct[0],-1.0*dx)
+    ABCD = get_pvects_cotangents(circs[0],circs[1])
+
+    tan_eqs = []
+    poss_lines = 0
+    color_ring = ['red','green','blue','purple']
+
+    for i, tan_pt in enumerate(ABCD):
+        eq = get_line_eq_uv_pt(ct[i],tan_pt)
+        #wl = get_xy_from_m_c(eq)
+        #plt.plot( wl[0],wl[1], color=color_ring[i])
+        if line_miss_all(CA, eq):
+            poss_lines ^= ( 1 << i )
+
+    one_line = 0
+    for i in range(len(ABCD)):
+        print i, ( 1 << i )
+        if poss_lines & ( 1 << i ):
+            one_line += 1
+    print "Possible lines = ", poss_lines & 1, poss_lines & 2,\
+                poss_lines & 4, poss_lines & 8
+
+
+for i, pt in enumerate(ABCD):
+    if poss_lines & ( 1 << i ):
+        ln_end = push_p_along_v_by_dx(pt,ct[i],-1.0*dx)
+        plt.scatter([pt[0], ln_end[0]], [pt[1], ln_end[0]], color=color_ring[i])
+        whole_ln = get_x_y_lists_P(ln_end, pt)
+        plt.plot(whole_ln[0], whole_ln[1], color=color_ring[i])
+
+"""A_C2 = push_p_along_v_by_dx(ABCD[0],ct[0],-1.0*dx)
 B_C2 = push_p_along_v_by_dx(ABCD[1],ct[1],-1.0*dx)
-C_C2 = push_p_along_v_by_dx(ABCD[3],ct[2],-1.0*dx)
-D_C2 = push_p_along_v_by_dx(ABCD[2],ct[3],-1.0*dx)
-
+C_C2 = push_p_along_v_by_dx(ABCD[2],ct[2],-1.0*dx)
+D_C2 = push_p_along_v_by_dx(ABCD[3],ct[3],-1.0*dx)
 
 plt.scatter(ABCD[0][0],ABCD[0][1], color='red')
 plt.scatter(ABCD[1][0],ABCD[1][1], color='green')
@@ -129,21 +228,19 @@ plt.scatter(ABCD[3][0],ABCD[3][1], color='purple')
 
 l1 = get_x_y_lists_P(A_C2, ABCD[0])
 l2 = get_x_y_lists_P(B_C2, ABCD[1])
-l3 = get_x_y_lists_P(C_C2, ABCD[3])
-l4 = get_x_y_lists_P(D_C2, ABCD[2])
-l5 =  get_x_y_lists_P(circ_c(circs[0]),circ_c(circs[1]))
-circle1 = plt.Circle((circs[0][1],circs[0][2]), circs[0][0])
-circle2 = plt.Circle((circs[1][1],circs[1][2]), circs[1][0])
-
+l3 = get_x_y_lists_P(C_C2, ABCD[2])
+l4 = get_x_y_lists_P(D_C2, ABCD[3])"""
+l5 = get_x_y_lists_P(circ_c(circs[0]),circ_c(circs[1]))
 
 fig = plt.gcf()
-fig.gca().add_artist(circle1)
-fig.gca().add_artist(circle2)
-plt.scatter([0,8],[0,8])
-plt.plot(l1[0],l1[1], color='red')
+for c in CA:
+    c_art = plt.Circle((c[1],c[2]), c[0])
+    fig.gca().add_artist(c_art)
+
+"""plt.plot(l1[0],l1[1], color='red')
 plt.plot(l2[0],l2[1], color='green')
 plt.plot(l3[0],l3[1], color='blue')
-plt.plot(l4[0],l4[1], color='purple')
+plt.plot(l4[0],l4[1], color='purple')"""
 plt.plot(l5[0],l5[1], color='orange')
 plt.show()
 
