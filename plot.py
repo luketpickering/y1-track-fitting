@@ -1,221 +1,150 @@
 #!/opt/local/bin/python2.7
 import matplotlib.pyplot as plt
-from math import sqrt, pow
+from math import sqrt, pow, asin, cos, sin, pi
 from sys import argv
-from random import gauss, uniform
 
-step_p=0.5
-step_g=0.05
-step_c=50.0
-phi_initial = 0.0
+#C = (R,X,Y)
+def get_sinang_com_tan_ext(C1,C2):
+    dx = C2[1] - C1[1]
+    dy = C2[2] - C1[2]
+    sinal = (C2[0] - C1[0])/sqrt(dx*dx + dy*dy)
+    return sinal
 
-j_sig_p = 1.0
-j_sig_g = 0.05
-j_sig_k = 200.0
+def get_sinang_com_tan_int(C1,C2):
+    dx = C2[1] - C1[1]
+    dy = C2[2] - C1[2]
+    sinal = (C2[0] + C1[0])/sqrt(dx*dx + dy*dy)
+    return sinal
 
-class param_blob:
-    lhood_eval = 0
-    samples = 0
+def rot_vector(V,theta):
+    return ((V[0]*cos(theta) - V[1]*sin(theta)), V[0]*sin(theta) + V[1]*cos(theta))
 
-    def __init__(self, phi, grad, interkept):
-        self.phi = phi
-        self.grad = grad
-        self.interkept = interkept
+def get_unit_vect_2P(P1,P2):
+    dx = P2[0] - P1[0]
+    dy = P2[1] - P1[1]
+    len = sqrt(dx*dx + dy*dy)
+    return (dx/len,dy/len)
 
-    def sample(self, X,Y,T):
-        self.lhood_eval = neg_llhood(X,Y,T,self)
-        return self.lhood_eval
+def get_unit_vect_2C(C1,C2):
+    dx = C2[1] - C1[1]
+    dy = C2[2] - C1[2]
+    len = sqrt(dx*dx + dy*dy)
+    return (dx/len,dy/len)
 
-    def __lt__(self,other):
-        return (self.lhood_eval < other.lhood_eval)
-    def __le__(self,other):
-        return (self.lhood_eval <= other.lhood_eval)
-    def __gt__(self,other):
-        return (self.lhood_eval > other.lhood_eval)
-    def __le__(self,other):
-        return (self.lhood_eval >= other.lhood_eval)
-    def __repr__(self):
-        return self.__str__()
-    def __str__(self):
-        return "\nlhood_eval: %s, Phi:%s, Grad:%s, K:%s" %(self.lhood_eval, self.phi, self.grad,self.interkept)
-
-def drift_distance(phi, tdc):
-    rtn = (phi*tdc)
-    if rtn < 0:
+def cotangents(C1, C2):
+    #ext
+    def cmp(x):
+        return x[0]
+    circs = sorted([C1,C2], key=cmp)
+    
+    dx = C2[1] - C1[1]
+    dy = C2[2] - C1[2]
+    len = sqrt(dx*dx + dy*dy)
+    
+    if len < (C1[0] + C2[0]):
         raise ValueError
-    return rtn
-
-def prop_track_distance(x0, y0, grad, kintercept):
-    rtn = abs(y0 - grad*x0 + kintercept)/sqrt(1 + grad*grad)
-    if rtn < 0:
-        raise ValueError
-    return rtn
-
-def find_grad(p1,p2):
-    return (p2[1] - p1[1])/(p2[0] - p1[0])
-
-def find_intercept(p1,grad):
-    return grad*p1[0] - p1[1]
-
-def init_guess(X,Y,T):
     
-    t = T[:]
-    t_min = min(t)
-    t_min_ind = t.index(t_min)
-    del t[t_min_ind]
-    t_2nd_min = min(t)
-    t_2nd_ind = t.index(t_2nd_min)
+    print circs
     
-    min_inds = sorted([t_min_ind, t_2nd_ind])
+    sin_ext = get_sinang_com_tan_ext(circs[0],circs[1])
+    sin_int = get_sinang_com_tan_int(circs[0],circs[1])
     
-    print min_inds
+    print sin_ext, sin_int
     
-    grad = find_grad( (X[min_inds[0]],Y[min_inds[0]]),
-                      (X[min_inds[1]],Y[min_inds[1]]))
-    return ( grad,
-             find_intercept((X[min_inds[0]],Y[min_inds[0]]), grad)
-            )
-            
-def neg_llhood(X,Y,T,P):
-    ss = 0
-    l2p = 0
-    dft = 0
-    for i in range(len(X)):
-        l2p = prop_track_distance(X[i],Y[i], P.grad, P.interkept)
-        dft = drift_distance(P.phi, T[i])
-        ss += (l2p - dft)*(l2p - dft)
-    return ss
+    th_ext = asin(sin_ext)
+    th_int = asin(sin_int)
+    c2c_uv = get_unit_vect_2C(circs[0],circs[1])
 
-def MCMC_param_jump(P):
-    nphi = gauss(P.phi,j_sig_p)
-    while(nphi < 0):
-        nphi = gauss(P.phi,j_sig_p)
-    grad = gauss(P.grad,j_sig_g)
-    interkept = gauss(P.interkept,j_sig_k)
+    uvs = (rot_vector(c2c_uv,th_ext), rot_vector(c2c_uv, -1.0*th_ext),
+            rot_vector(c2c_uv,th_int), rot_vector(c2c_uv, -1.0*th_int))
+    return uvs
 
-    return param_blob(nphi,grad,interkept)
+def vadd(v1,v2):
+    return (v1[0] + v2[0], v1[1] + v2[1])
+def vscale(v1,sf):
+    return (v1[0] * sf, v1[1] * sf)
 
-def MCMC_step(P, X,Y,T):
-
-    prop_P = MCMC_param_jump(P)
-    if P.lhood_eval == 0:
-        print P, P.sample(X,Y,T)
-    a = P.lhood_eval/prop_P.sample(X,T,Y)
+def get_pvects_cotangents(C1,C2):
     
-    if( a >= 1.0):
-        prop_P.samples += 1
-        return prop_P
-    else:
-        uniform_pick = uniform(0.0,1.0)
-        if ( uniform_pick < a ):
-            prop_P.samples += 1
-            return prop_P
-        else:
-            P.samples += 1
-            return P
+    def cmp(x):
+        return x[0]
+    circs = sorted([C1,C2], key=cmp)
+    
+    sin_ext = get_sinang_com_tan_ext(circs[0],circs[1])
+    sin_int = get_sinang_com_tan_int(circs[0],circs[1])
+
+    th_ext = asin(sin_ext)
+    th_int = asin(sin_int)
+    c2c_uv = get_unit_vect_2C(circs[0],circs[1])
+
+    uvs = (rot_vector(c2c_uv,th_ext), rot_vector(c2c_uv, -1.0*th_ext),
+            rot_vector(c2c_uv,th_int), rot_vector(c2c_uv, -1.0*th_int))
+    
+    nty_rad = pi*90.0/180.0
+
+    ah = rot_vector(c2c_uv, th_ext + nty_rad)
+    A = vadd(vscale(ah,circs[0][0]), (circs[0][1],circs[0][2]))
+    bh = rot_vector(c2c_uv, -1.0*(th_ext + nty_rad))
+    B = vadd(vscale(bh,circs[0][0]), (circs[0][1],circs[0][2]))
+    ch = rot_vector(c2c_uv, nty_rad - th_int )
+    C = vadd(vscale(ch,circs[0][0]), (circs[0][1],circs[0][2]))
+    dh = rot_vector(c2c_uv, th_int - nty_rad )
+    D = vadd(vscale(dh,circs[0][0]), (circs[0][1],circs[0][2]))
+
+    return (A,B,C,D)
+
+def get_x_y_lists_P(P1,P2):
+    return [ [P1[0],P2[0]], [P1[1],P2[1]] ]
+
+def push_p_along_v_by_dx(P1, uv, dx):
+    dy = uv[1] * (dx/uv[0])
+    return vadd(P1, (dx,dy))
+def circ_c(C1):
+    return (C1[1],C1[2])
+
+phi = 26.0*0.0001
+C1 = (142.0*phi,2.0, 3.0)
+C2 = (111.0*phi,7.0,4.5)
+
+ct = cotangents(C1,C2)
+
+def cmp(x):
+        return x[0]
+circs = sorted([C1,C2], key=cmp)
+
+dx = circs[0][1] - 1.0
+
+ABCD = get_pvects_cotangents(C1,C2)
+
+A_C2 = push_p_along_v_by_dx(ABCD[0],ct[0],-1.0*dx)
+B_C2 = push_p_along_v_by_dx(ABCD[1],ct[1],-1.0*dx)
+C_C2 = push_p_along_v_by_dx(ABCD[3],ct[2],-1.0*dx)
+D_C2 = push_p_along_v_by_dx(ABCD[2],ct[3],-1.0*dx)
 
 
-def construct_micron_grid():
-    grid = []
-    size = 8
-    for i in range(size):
-            grid.append([ ( y*10000.0 if not i%2 else (y*10000.0 + 5000.0) ) for y in range(size)])
-    return grid
+plt.scatter(ABCD[0][0],ABCD[0][1], color='red')
+plt.scatter(ABCD[1][0],ABCD[1][1], color='green')
+plt.scatter(ABCD[2][0],ABCD[2][1], color='blue')
+plt.scatter(ABCD[3][0],ABCD[3][1], color='purple')
 
-grid = construct_micron_grid()
-data_file = None
-try:
-    data_file = open(argv[1], 'r')
-except:
-    print "Invalid Data file"
-    exit()
-xyz = [[],[],[]]
-X, Y, T = xyz[0], xyz[1], xyz[2]
-
-for line in data_file:
-    raw = line.split()
-    X.append(int(raw[0])*10000.0)
-    Y.append(grid[int(raw[0])][int(raw[1])])
-    T.append(int(raw[2])*1.0)
-data_file.close()
-
-initial_guess = init_guess(X,Y,T)
-
-#ss_est = (neg_llhood(X,Y,T,initial_guess[0],initial_guess[1],
-#                                    phi_initial),
-#            initial_guess[0],
-#            initial_guess[1],
-#            phi_initial)
-
-#phi, grad, kintercept = ss_est[3], ss_est[1], ss_est[2]
-#print "Best initial fit: grad:%s, intercept:%s, phi:%s" % (grad, kintercept, phi)
-"""
-for i in range(100):
-    print "I: ",i , "MIN_V:%s, MIN_g:%s, MIN_c:%s MIN_phi:%s" % ss_est
-    for j in range(-50,51):
-        for k in range(-50,51):
-            
-            phi = phi_initial + i*step_p
-            grad = initial_guess[0] + j*step_g
-            kintercept = initial_guess[1] + k*step_c
-            
-            new_est = neg_llhood(X,Y,T,grad,kintercept,phi)
-            if new_est < ss_est[0]:
-                ss_est = (new_est, grad, kintercept, phi)
-
-#ss_est = (0,ig[0], ig[1] + 0.1, 1.0)
-#igx, igy = [0,7], [ig[1], ig[1] + ig[0]*X[7]]
-"""
-
-steps = 0
-samples = []
-P = param_blob(phi_initial,initial_guess[0],initial_guess[1])
-P.sample(X,Y,T)
-print "Best initial fit: grad:%s, intercept:%s, phi:%s" % (P.grad, \
-        P.interkept, P.phi)
-while steps < 10000:
-    np = MCMC_step(P,X,Y,T)
-    if np.samples == 1:
-        steps += 1
-        P = np
-        if steps == 1000:
-            print "Finished burn in."
-        if steps > 1000:
-            samples.append(np)
+l1 = get_x_y_lists_P(A_C2, ABCD[0])
+l2 = get_x_y_lists_P(B_C2, ABCD[1])
+l3 = get_x_y_lists_P(C_C2, ABCD[3])
+l4 = get_x_y_lists_P(D_C2, ABCD[2])
+l5 =  get_x_y_lists_P(circ_c(circs[0]),circ_c(circs[1]))
+circle1 = plt.Circle((circs[0][1],circs[0][2]), circs[0][0])
+circle2 = plt.Circle((circs[1][1],circs[1][2]), circs[1][0])
 
 
-#fitx, fity = [0,70000.0], \
-#            [-1.0*ss_est[2], -1.0*ss_est[2] + ss_est[1]*70000.0]
-#Dt = map(lambda x: float(x)*ss_est[3]/10.0, T)
-
-min_P = min(samples)
-#print samples
-
-print "Min Found: ", min_P
-
-fitx, fity = [0,70000.0], \
-             [-1.0*min_P.interkept, \
-                -1.0*min_P.interkept + min_P.grad*70000.0]
-
-Dt = map(lambda x: float(x)*min_P.phi, T)
-
-
-#print X,Y,T,ss_est
-
-#for o in range(len(X)):
-#    print "X: ", o, " l2p: ", prop_track_distance(X[o],Y[o],ss_est[1],ss_est[2]), " dft: ", drift_distance(ss_est[3],T[o])
-#print "neg_llhood = ", neg_llhood(X,Y,T,ss_est[1],ss_est[2],ss_est[3])
-
-swx,swy = [], []
-for _i in range(len(grid)):
-    for _y in grid[_i]:
-        swx.append(_i*10000.0)
-        swy.append(_y)
-
-plt.scatter(X,Y,Dt, marker="o")
-plt.scatter(swx,swy, marker="*", color='red')
-plt.scatter(X,Y, color='green')
-plt.plot(fitx,fity, color='red')
-plt.savefig('out.pdf')
+fig = plt.gcf()
+fig.gca().add_artist(circle1)
+fig.gca().add_artist(circle2)
+plt.scatter([0,8],[0,8])
+plt.plot(l1[0],l1[1], color='red')
+plt.plot(l2[0],l2[1], color='green')
+plt.plot(l3[0],l3[1], color='blue')
+plt.plot(l4[0],l4[1], color='purple')
+plt.plot(l5[0],l5[1], color='orange')
+plt.show()
 
 
