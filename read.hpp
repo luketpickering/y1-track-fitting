@@ -42,6 +42,13 @@ inline void get_readout(unsigned short wro, unsigned short *out){
     out[2] = get_tdc(wro);
 }
 
+inline void parse_event(unsigned char* data, unsigned short* hit){
+    unsigned short holder;
+    holder = (data[0] << 0) | (data[1] << 8);
+    get_readout(holder, hit);
+    return;
+}
+
 bool stream_init(char *fn){
 
     ifs.open(fn, ios::in | ios::binary);
@@ -51,17 +58,6 @@ bool stream_init(char *fn){
     
     return ifs.good();
 
-}
-
-inline void parse_event(unsigned char* data, unsigned short* hit){
-    unsigned short holder;
-    holder = (data[0] << 0) | (data[1] << 8);
-    
-    //cout << "Endian Check: 0b"  << bss((unsigned short*) data) << ", 0b"
-    //     << bss(&holder) << endl;
-    
-    get_readout(holder, hit);
-    return;
 }
 
 bool get_event(unsigned short* hits){
