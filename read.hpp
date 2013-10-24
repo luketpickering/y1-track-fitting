@@ -36,16 +36,25 @@ inline unsigned short get_tdc(unsigned short wro){
     return LRTs(wro,0,6);
 }
 
-inline void get_readout(unsigned short wro, unsigned short *out){
+inline void get_readout_expl(unsigned short wro, unsigned short *out){
     out[0] = get_x(wro);
     out[1] = get_y(wro);
     out[2] = get_tdc(wro);
+}
+inline void get_readout_fast(unsigned short wro, unsigned short *out){
+	out[0] = wro & 7;
+	out[1] = (wro >> 3) & 7;
+	out[2] = (wro >> 6) & 1023;
 }
 
 inline void parse_event(unsigned char* data, unsigned short* hit){
     unsigned short holder;
     holder = (data[0] << 0) | (data[1] << 8);
-    get_readout(holder, hit);
+#ifndef VERBOSE
+    get_readout_fast(holder, hit);
+#else
+	get_readout_expl(holder, hit);
+#endif
     return;
 }
 

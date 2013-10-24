@@ -2,6 +2,7 @@
 #include <iomanip>
 #include "read.hpp"
 #include <cmath>
+#include "fit.hpp"
 
 // ---------------------START USING STATEMENTS-----------------------
 using std::cout;
