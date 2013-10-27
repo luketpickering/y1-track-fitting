@@ -45,33 +45,62 @@ int main(int argv, char* argc[]){
     
     int hist[num_bins] = {0};
     
-    get_event(event);
     
-    vector< vector<double> > circs(2,vector<double>(3,0.0));
+    vector< vector<double> > circs(2);
+    vector< vector<double> > all_circs(8,vector<double>(3,0.0));
+    
     vector< vector<double> > tuv(4,vector<double>(2,0.0));
     vector< vector<double> > ep(4,vector<double>(2,0.0));
     
-    
-    for(size_t i = 0; i < 8; i += 7)
-    {
-        circs[(i%2)][0] = event[i*3]*10000.0;
-        circs[(i%2)][1] = event[i*3 + 1]*10000.0 + (int(i%2))*5000.0;
-        circs[(i%2)][2] = event[i*3 + 2]*phi;
+    int cnt = 0;
+    int stepcnt = 0;
+    double sum_phi = 0.0;
+    int btwn[2] = {0,7};
+    while(get_event(event)){
+        phi = 1.0;
+        for(size_t i = 0; i < 8; i++)
+        {
+            all_circs[i][0] = event[i*3]*10000.0;
+            all_circs[i][1] = event[i*3 + 1]*10000.0 + (int(i%2))*5000.0;
+            all_circs[i][2] = event[i*3 + 2];
         
-        cout << circs[(i%2)][0] << " " << circs[(i%2)][1] << " " 
-             << circs[(i%2)][2] << endl;
+           // cout << all_circs[i][0] << " " << all_circs[i][1] << " " 
+             //   << all_circs[i][2] << endl;
+        }
+    
+        double phi_init = max_poss_phi(event)+0.5;
+    
+        double c_phi = circs_change_phi(all_circs,phi_init);
+        bool found_ln = false;
+        stepcnt = 0;
+        while (c_phi > 0.0 && !found_ln){
+            stepcnt++;
+            c_phi = circs_change_phi(all_circs,c_phi-0.5);
+            circs[0] = all_circs[0];
+            circs[1] = all_circs[7];
+            find_com_tang_and_ep(circs,tuv, ep);
+            for(size_t i = 0; i < 4; ++i)
+            {
+                Eqn ln_eq = v_pt_line(tuv[i],ep[i]);
+                bool miss = line_miss_all_others(all_circs, ln_eq, btwn);
+                //pvect(circs[0]);pvect(circs[1]);
+                /*cout << "Phi:" << c_phi << endl 
+                    << "Edge Points: " << ep[i][0] << " " << ep[i][1] << endl
+                        << "UV = " << tuv[i][0] << " " << tuv[i][1] << endl
+                            << "Eqn: y = " << ln_eq[0] << "x + " << ln_eq[1] << endl 
+                                << "Line misses all others? " << miss << endl << endl;
+                */if (miss){cnt += 1; sum_phi += c_phi; found_ln = true; break;}
+            }
+        }
+        if (!(cnt%10000)) { 
+            cout << "Read event:" << cnt+1 << endl
+                 << "\tsteps required:" << stepcnt
+                 << "\tphi_init = " << phi_init
+                 << "\tphi calc = " << c_phi << endl << endl;
+        }
     }
-    
-    find_com_tang_and_ep(circs,tuv, ep);
-    
-    for(size_t i = 0; i < 4; ++i)
-    {
-      Eqn ln_eq = v_pt_line(tuv[i],ep[i]);
-      cout << "Edge Points: " << ep[i][0] << " " << ep[i][1] << endl
-	   << "UV = " << tuv[i][0] << " " << tuv[i][1] << endl
-	   << "Eqn: y = " << ln_eq[0] << "x + " << ln_eq[1] << endl << endl;
-    }
-    
+    cout << sum_phi << " " << cnt << " avg phi = " << (sum_phi/double(cnt)) << endl;
+    cout << "avg# steps = " << (stepcnt/cnt) << endl;
 #ifdef HIST    
     while (get_event(event)) {
 #ifdef VERBOSE
