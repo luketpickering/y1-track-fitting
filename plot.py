@@ -113,8 +113,10 @@ def get_x_y_lists_P(P1,P2):
     return [ [P1[0],P2[0]], [P1[1],P2[1]] ]
 
 def push_p_along_v_by_dx(P1, uv, dx):
-    dy = uv[1] * (dx/uv[0])
-    return vadd(P1, (dx,dy))
+    #dy = uv[1] * (dx/uv[0])
+    #return vadd(P1, (dx,dy))
+    numdx = dx/uv[0]
+    return vadd(P1, vscale(uv,numdx))
 
 def get_line_eq_uv_pt(uv,pt):
     m = uv[1]/uv[0]
@@ -139,10 +141,8 @@ def line_miss_all(circs, ln):
             continue
         leng = prop_track_distance(c[1],c[2],ln[0], -1.0*ln[1])
         if leng < c[0]:
-            break
-    else:
-        return True
-    return False
+            return False
+    return True
 
 grid = construct_micron_grid()
 data_file = None
@@ -157,7 +157,7 @@ else:
         for _y in grid[_i]:
             swx.append(_i*10000.0)
             swy.append(_y)
-    plt.scatter(swx,swy, marker="*", color='red')
+    #plt.scatter(swx,swy, marker="*", color='red')
 
 i_phi = 38.0
 
@@ -174,13 +174,14 @@ data_file.close()
 def cmp(x):
         return x[0]
 circs = sorted([CA[0],CA[7]], key=cmp)
+print circs
+color_ring = ['red','green','blue','purple']
 
 n_phi = i_phi
 one_line = 0
-while (one_line != 1) and ( n_phi > 0.05):
-    print "Running for phi = ", n_phi
+while (one_line != 1) and ( n_phi > 0.001):
     o_phi = n_phi
-    n_phi -= 0.05
+    n_phi -= 0.1
     for c in CA:
         c[0] = c[0]*n_phi/o_phi
     ct = cotangents(circs[0],circs[1])
@@ -191,7 +192,6 @@ while (one_line != 1) and ( n_phi > 0.05):
 
     tan_eqs = []
     poss_lines = 0
-    color_ring = ['red','green','blue','purple']
 
     for i, tan_pt in enumerate(ABCD):
         eq = get_line_eq_uv_pt(ct[i],tan_pt)
@@ -202,34 +202,20 @@ while (one_line != 1) and ( n_phi > 0.05):
 
     one_line = 0
     for i in range(len(ABCD)):
-        print i, ( 1 << i )
+        #print i, ( 1 << i )
         if poss_lines & ( 1 << i ):
             one_line += 1
-    print "Possible lines = ", poss_lines & 1, poss_lines & 2,\
-                poss_lines & 4, poss_lines & 8
+    #print "Possible lines = ", poss_lines & 1, poss_lines & 2,\
+           #     poss_lines & 4, poss_lines & 8
 
-
+print n_phi
 for i, pt in enumerate(ABCD):
     if poss_lines & ( 1 << i ):
         ln_end = push_p_along_v_by_dx(pt,ct[i],-1.0*dx)
         plt.scatter([pt[0], ln_end[0]], [pt[1], ln_end[0]], color=color_ring[i])
         whole_ln = get_x_y_lists_P(ln_end, pt)
         plt.plot(whole_ln[0], whole_ln[1], color=color_ring[i])
-
-"""A_C2 = push_p_along_v_by_dx(ABCD[0],ct[0],-1.0*dx)
-B_C2 = push_p_along_v_by_dx(ABCD[1],ct[1],-1.0*dx)
-C_C2 = push_p_along_v_by_dx(ABCD[2],ct[2],-1.0*dx)
-D_C2 = push_p_along_v_by_dx(ABCD[3],ct[3],-1.0*dx)
-
-plt.scatter(ABCD[0][0],ABCD[0][1], color='red')
-plt.scatter(ABCD[1][0],ABCD[1][1], color='green')
-plt.scatter(ABCD[2][0],ABCD[2][1], color='blue')
-plt.scatter(ABCD[3][0],ABCD[3][1], color='purple')
-
-l1 = get_x_y_lists_P(A_C2, ABCD[0])
-l2 = get_x_y_lists_P(B_C2, ABCD[1])
-l3 = get_x_y_lists_P(C_C2, ABCD[2])
-l4 = get_x_y_lists_P(D_C2, ABCD[3])"""
+print ABCD
 l5 = get_x_y_lists_P(circ_c(circs[0]),circ_c(circs[1]))
 
 fig = plt.gcf()
@@ -237,10 +223,6 @@ for c in CA:
     c_art = plt.Circle((c[1],c[2]), c[0])
     fig.gca().add_artist(c_art)
 
-"""plt.plot(l1[0],l1[1], color='red')
-plt.plot(l2[0],l2[1], color='green')
-plt.plot(l3[0],l3[1], color='blue')
-plt.plot(l4[0],l4[1], color='purple')"""
 plt.plot(l5[0],l5[1], color='orange')
 plt.show()
 

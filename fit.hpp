@@ -1,6 +1,9 @@
 #include <vector>
 #include <cmath>
-using std::vector;
+#include <string>
+
+using std::vector; using std:: cout; using std::flush; 
+using std::endl; using std::string;
 
 #define ANGL_T_ANGL(a) (a == (1 << 0))
 #define ANGL_T_COS(a) (a == (1 << 1))
@@ -8,6 +11,7 @@ using std::vector;
 #define SIN_ANG_FLAG (1<<2)
 
 const double tdc_to_ns = 0.5;
+double phi = 38.0;
 
 #ifdef DEBUG
 class Circle{
@@ -144,17 +148,29 @@ char sort_circ_ind(const vector< Circle >& circs){
 #define BOTE 1
 #define TOPI 2
 #define BOTI 3
-
+void pvect(const vector<double>& vect,const string& head="Vect:"){
+    cout << head <<  " "  << flush;
+    for(size_t i = 0; i < vect.size(); ++i)
+    {
+        cout << " x_"<<i<<": " << vect[i];
+    }
+    cout << endl;
+}
 void find_com_tang_and_ep(vector< Circle >& circs,
     vector< vector<double> >& out_tuv, vector< vector<double> >& out_ep){
         char sort_in = sort_circ_ind(circs);
+        pvect(circs[0]);
+        pvect(circs[1]);
         //now circs[0] is always lower in x
         //bitflip to swap weather circs[0] was remebered as having larger R
         if(sort_in & 2){ sort_in = ~sort_in; circs[0].swap(circs[1]);}
+        pvect(circs[0]);
+        pvect(circs[1]);
 
         double dxdy[2];
         double len;
         vector<double> c2c_uv = unit_vect_2p(circs[0], circs[1], len, dxdy);
+        cout << circs[0][0] << " HELLO" << endl;
         
         //if R of circ[1] is larger
         if(sort_in & 1){
@@ -194,7 +210,6 @@ void find_com_tang_and_ep(vector< Circle >& circs,
             
             double sin_ext = swap_cosa_sina(sin_ext);
             double sin_int = swap_cosa_sina(sin_int);
-            
             out_ep[TOPE] = vscale_2D(
                     vrot_2D(c2c_uv, -1.0*sin_ext, SIN_ANG_FLAG), circs[0][2]);
             out_ep[BOTE] = vscale_2D(

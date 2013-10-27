@@ -45,7 +45,32 @@ int main(int argv, char* argc[]){
     
     int hist[num_bins] = {0};
     
+    get_event(event);
     
+    vector< vector<double> > circs(2,vector<double>(3,0.0));
+    vector< vector<double> > tuv(4,vector<double>(2,0.0));
+    vector< vector<double> > ep(4,vector<double>(2,0.0));
+    
+    
+    for(size_t i = 0; i < 8; i += 7)
+    {
+        circs[(i%2)][0] = event[i*3]*10000.0;
+        circs[(i%2)][1] = event[i*3 + 1]*10000.0 + (int(i%2))*5000.0;
+        circs[(i%2)][2] = event[i*3 + 2]*phi;
+        
+        cout << circs[(i%2)][0] << " " << circs[(i%2)][1] << " " 
+             << circs[(i%2)][2] << endl;
+    }
+    
+    find_com_tang_and_ep(circs,tuv, ep);
+    
+    for(size_t i = 0; i < 4; ++i)
+    {
+        cout << ep[i][0] << " " << ep[i][1] <<  
+            " " << sqrt(ep[i][0]*ep[i][0]+ep[i][1]*ep[i][1]) << endl;
+    }
+    
+#ifdef HIST    
     while (get_event(event)) {
 #ifdef VERBOSE
         if (! (num_events % 100000) ) {
@@ -75,9 +100,7 @@ int main(int argv, char* argc[]){
         count += hist[i];
         
     }
-    
-    cout << count << endl;
-    
+#endif        
     return 0;
 }
 

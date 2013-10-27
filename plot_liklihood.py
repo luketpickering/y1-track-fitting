@@ -1,5 +1,5 @@
 #!/opt/local/bin/python2.7
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from math import sqrt, pow
 from sys import argv
 from random import gauss, uniform
@@ -8,7 +8,7 @@ phi_initial = 26.0
 
 j_sig_p = 0.1
 j_sig_g = 0.05
-j_sig_k = 1000.0
+j_sig_k = 50.0
 
 class param_blob:
     lhood_eval = 0
@@ -173,10 +173,10 @@ for _i in range(len(grid)):
         swx.append(_i*10000.0)
         swy.append(_y)
 
-plt.scatter(X,Y,Dt, marker="o")
-plt.scatter(swx,swy, marker="*", color='red')
-plt.scatter(X,Y, color='green')
-plt.plot(fitx,fity, color='red')
-plt.savefig('out.pdf')
+#plt.scatter(X,Y,Dt, marker="o")
+#plt.scatter(swx,swy, marker="*", color='red')
+#plt.scatter(X,Y, color='green')
+#plt.plot(fitx,fity, color='red')
+#plt.savefig('out.pdf')
 
 
