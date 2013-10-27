@@ -4,6 +4,8 @@
 
 using std::vector; using std:: cout; using std::flush; 
 using std::endl; using std::string;
+using std::abs; using std::cos; using std::sin;
+using std::acos; using std::asin;
 
 #define ANGL_T_ANGL(a) (a == (1 << 0))
 #define ANGL_T_COS(a) (a == (1 << 1))
@@ -11,7 +13,8 @@ using std::endl; using std::string;
 #define SIN_ANG_FLAG (1<<2)
 
 const double tdc_to_ns = 0.5;
-double phi = 38.0;
+double phi = 26.0;
+const double pi = asin(1.0)*2.0;
 
 #ifdef DEBUG
 class Circle{
@@ -42,7 +45,7 @@ double swap_cosa_sina(const double &triga){
 
 vector<double> vadd_2D(const vector<double> &v1, const vector<double> &v2){
     vector<double> rtnv(2,v1[0] + v2[0]);
-    rtnv[1] =  v1[1] + v2[0];
+    rtnv[1] =  v1[1] + v2[1];
     return rtnv;
 }
 vector<double> vscale_2D(const vector<double> &v1, const double &sf){
@@ -121,7 +124,7 @@ bool line_miss_all_others(const vector< Circle >& circs, const Eqn& eq,
 
 Eqn v_pt_line(const vector<double>& V1, const vector<double>& pt){
     Eqn eq(2, V1[1]/V1[0]);
-    eq[1] = pt[0] - eq[0]*pt[0];
+    eq[1] = pt[1] - eq[0]*pt[0];
     return eq;
 }
 
@@ -170,55 +173,86 @@ void find_com_tang_and_ep(vector< Circle >& circs,
         double dxdy[2];
         double len;
         vector<double> c2c_uv = unit_vect_2p(circs[0], circs[1], len, dxdy);
-        cout << circs[0][0] << " HELLO" << endl;
         
-        //if R of circ[1] is larger
+        //if R of circs[0] is larger
         if(sort_in & 1){
             
-            double sin_ext = sina_ext_ctang(len, circs[0], circs[1]);
-            double sin_int = sina_int_ctang(len, circs[0], circs[1]);
+	  double sin_ext = sina_ext_ctang(len, circs[0], circs[1]);
+	  double sin_int = sina_int_ctang(len, circs[0], circs[1]);
+	  double a_ext = asin(sin_ext);
+	  double a_int = asin(sin_int);
+
+
+	  //out_tuv[TOPE] = vrot_2D(c2c_uv, -1.0*sin_ext, SIN_ANG_FLAG);
+	  //out_tuv[BOTE] = vrot_2D(c2c_uv, sin_ext, SIN_ANG_FLAG);
+	  //out_tuv[TOPI] = vrot_2D(c2c_uv, sin_int, SIN_ANG_FLAG);
+	  //out_tuv[BOTI] = vrot_2D(c2c_uv, -1.0*sin_int, SIN_ANG_FLAG);
+
+            out_tuv[TOPE] = vrot_2D(c2c_uv, a_ext, 1);
+            out_tuv[BOTE] = vrot_2D(c2c_uv, -1.0*a_ext, 1);
+            out_tuv[TOPI] = vrot_2D(c2c_uv, -1.0*a_int, 1);
+            out_tuv[BOTI] = vrot_2D(c2c_uv, a_int, 1);
             
-            out_tuv[TOPE] = vrot_2D(c2c_uv, -1.0*sin_ext, SIN_ANG_FLAG);
-            out_tuv[BOTE] = vrot_2D(c2c_uv, sin_ext, SIN_ANG_FLAG);
-            out_tuv[TOPI] = vrot_2D(c2c_uv, sin_int, SIN_ANG_FLAG);
-            out_tuv[BOTI] = vrot_2D(c2c_uv, -1.0*sin_int, SIN_ANG_FLAG);
+	    //double sin_90p_ext = swap_cosa_sina(sin_ext);
+            //double sin_90na_int = swap_cosa_sina(sin_int);
+	    double a90pa_ext = 90.0*pi/180.0 + a_ext;
+	    double a90na_int = 90.0*pi/180 - a_int;
             
-            double sin_90p_ext = swap_cosa_sina(sin_ext);
-            double sin_90na_int = swap_cosa_sina(sin_int);
-            
-            out_ep[TOPE] = vscale_2D(
-                    vrot_2D(c2c_uv, -1.0*sin_90p_ext, SIN_ANG_FLAG), 
-                    circs[0][2]);
+            out_ep[TOPE] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, a90pa_ext, 1), 
+                    circs[0][2]),circs[0]);
+            out_ep[BOTE] = vadd_2D(vscale_2D(
+			   vrot_2D(c2c_uv, -1.0*a90pa_ext, 1), 
+			   circs[0][2]),circs[0]);
+            out_ep[TOPI] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, a90na_int, 1), 
+                    circs[0][2]),circs[0]);
+            out_ep[BOTI] = vadd_2D(vscale_2D(
+			   vrot_2D(c2c_uv, -1.0*a90na_int, 1), 
+			   circs[0][2]),circs[0]);
+
+	    out_ep[TOPE] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, a90pa_ext, 1), 
+                    circs[0][2]),vector<double>(2,10000000.0));
             out_ep[BOTE] = vscale_2D(
-                    vrot_2D(c2c_uv, sin_90p_ext, SIN_ANG_FLAG), circs[0][2]);
+			   vrot_2D(c2c_uv, -1.0*a90pa_ext, 1), 
+			   circs[0][2]);
             out_ep[TOPI] = vscale_2D(
-                    vrot_2D(c2c_uv, -1.0*sin_90na_int, SIN_ANG_FLAG), 
+                    vrot_2D(c2c_uv, a90na_int, 1), 
                     circs[0][2]);
             out_ep[BOTI] = vscale_2D(
-                    vrot_2D(c2c_uv, sin_90na_int, SIN_ANG_FLAG), circs[0][2]);
-            
+			   vrot_2D(c2c_uv, -1.0*a90na_int, 1), 
+			   circs[0][2]);
         } else {
             //cos(angle_at_larger_circle) = sin(angle_at_smaller_circle)
             //want sin to remove ambiguity over rotations about 0
-            double sin_90na_ext = sina_ext_ctang(len, circs[1], circs[0]);
-            double sin_90na_int = sina_int_ctang(len, circs[1], circs[0]);
+            //double sin_90na_ext = sina_ext_ctang(len, circs[1], circs[0]);
+            //double sin_90na_int = sina_int_ctang(len, circs[1], circs[0]);
+	  double a_ext = acos(sina_ext_ctang(len, circs[1], circs[0]));
+	  double a_int = acos(sina_int_ctang(len, circs[1], circs[0]));
+          double a90_mext = 90.0*pi/180.0 - a_ext;
+	  double a90_mint = 90.0*pi/180.0 - a_int;
+
+            out_tuv[TOPE] = vrot_2D(c2c_uv, -1.0*a90_mext, 1);
+            out_tuv[BOTE] = vrot_2D(c2c_uv, a90_mext, 1);
+            out_tuv[TOPI] = vrot_2D(c2c_uv, -1.0*a90_mint, 1);
+            out_tuv[BOTI] = vrot_2D(c2c_uv, a90_mint, 1);
             
-            out_tuv[TOPE] = vrot_2D(c2c_uv, sin_90na_ext, SIN_ANG_FLAG);
-            out_tuv[BOTE] = vrot_2D(c2c_uv, -1.0*sin_90na_ext, SIN_ANG_FLAG);
-            out_tuv[TOPI] = vrot_2D(c2c_uv, -1.0*sin_90na_int, SIN_ANG_FLAG);
-            out_tuv[BOTI] = vrot_2D(c2c_uv, sin_90na_int, SIN_ANG_FLAG);
-            
-            double sin_ext = swap_cosa_sina(sin_ext);
-            double sin_int = swap_cosa_sina(sin_int);
-            out_ep[TOPE] = vscale_2D(
-                    vrot_2D(c2c_uv, -1.0*sin_ext, SIN_ANG_FLAG), circs[0][2]);
-            out_ep[BOTE] = vscale_2D(
-                    vrot_2D(c2c_uv, sin_ext, SIN_ANG_FLAG), circs[0][2]);
-            out_ep[TOPI] = vscale_2D(
-                    vrot_2D(c2c_uv, -1.0*sin_int, SIN_ANG_FLAG), circs[0][2]);
-            out_ep[BOTI] = vscale_2D(
-                    vrot_2D(c2c_uv, sin_int, SIN_ANG_FLAG), circs[0][2]);
-        }
-        
-        
+            //double sin_ext = swap_cosa_sina(sin_ext);
+            //double sin_int = swap_cosa_sina(sin_int);
+
+            out_ep[TOPE] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, a_ext, 1), 
+		    circs[0][2]),circs[0]);
+            out_ep[BOTE] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, -1.0*a_ext, 1), 
+		    circs[0][2]),circs[0]);
+            out_ep[TOPI] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, a_int, 1), 
+		    circs[0][2]),circs[0]);
+            out_ep[BOTI] = vadd_2D(vscale_2D(
+                    vrot_2D(c2c_uv, -1.0*a_int, 1), 
+		    circs[0][2]),circs[0]);
+
+        }        
     }

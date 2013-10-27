@@ -6,6 +6,7 @@
 
 using std::cout;
 using std::endl;
+using std::abs;
 const double pi = 2.0*asin(1.0);
 
 bool veq(const vector<double>& a, const vector<double>& b){    

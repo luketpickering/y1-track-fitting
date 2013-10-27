@@ -66,8 +66,10 @@ int main(int argv, char* argc[]){
     
     for(size_t i = 0; i < 4; ++i)
     {
-        cout << ep[i][0] << " " << ep[i][1] <<  
-            " " << sqrt(ep[i][0]*ep[i][0]+ep[i][1]*ep[i][1]) << endl;
+      Eqn ln_eq = v_pt_line(tuv[i],ep[i]);
+      cout << "Edge Points: " << ep[i][0] << " " << ep[i][1] << endl
+	   << "UV = " << tuv[i][0] << " " << tuv[i][1] << endl
+	   << "Eqn: y = " << ln_eq[0] << "x + " << ln_eq[1] << endl << endl;
     }
     
 #ifdef HIST    

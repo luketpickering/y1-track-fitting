@@ -147,7 +147,7 @@ def line_miss_all(circs, ln):
 grid = construct_micron_grid()
 data_file = None
 try:
-    data_file = open(argv[1], 'r')
+    data_file = open(argv[-1], 'r')
 except:
     print "Invalid Data file"
     exit()
@@ -195,6 +195,8 @@ while (one_line != 1) and ( n_phi > 0.001):
 
     for i, tan_pt in enumerate(ABCD):
         eq = get_line_eq_uv_pt(ct[i],tan_pt)
+        tan_eqs.append(eq)
+
         #wl = get_xy_from_m_c(eq)
         #plt.plot( wl[0],wl[1], color=color_ring[i])
         if line_miss_all(CA, eq):
@@ -205,6 +207,9 @@ while (one_line != 1) and ( n_phi > 0.001):
         #print i, ( 1 << i )
         if poss_lines & ( 1 << i ):
             one_line += 1
+    if(one_line == 1):
+        print "LINES"
+        print tan_eqs;
     #print "Possible lines = ", poss_lines & 1, poss_lines & 2,\
            #     poss_lines & 4, poss_lines & 8
 
@@ -215,6 +220,7 @@ for i, pt in enumerate(ABCD):
         plt.scatter([pt[0], ln_end[0]], [pt[1], ln_end[0]], color=color_ring[i])
         whole_ln = get_x_y_lists_P(ln_end, pt)
         plt.plot(whole_ln[0], whole_ln[1], color=color_ring[i])
+print "Edge Points"
 print ABCD
 l5 = get_x_y_lists_P(circ_c(circs[0]),circ_c(circs[1]))
 
