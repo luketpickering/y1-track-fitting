@@ -1,8 +1,7 @@
-#include <vector>
 #include <cmath>
 #include <string>
 
-using std::vector; using std:: cout; using std::flush; 
+using std:: cout; using std::flush; 
 using std::endl; using std::string;
 using std::abs; using std::cos; using std::sin;
 using std::acos; using std::asin;
@@ -12,49 +11,25 @@ using std::acos; using std::asin;
 #define ANGL_T_SIN(a) (a == (1 << 2))
 #define SIN_ANG_FLAG (1<<2)
 
-const double tdc_to_ns = 1.0;
-double phi = 1.0;
-const double pi = asin(1.0)*2.0;
+static const double tdc_to_ns = 1.0;
+static double phi = 1.0;
+static const double pi = asin(1.0)*2.0;
 
-#ifdef DEBUG
-class Circle{
-public:
-    vector<double> cont;
-    vector<double>& operator[](const int ind){
-        if (ind > 2){ int failboat = 1/0; }
-        if ( cont[ind] < 0.0 ){ int failboat = 1/0; }
-        return cont[ind];
-    }
-};
-class Eqn{
-public:
-    vector<double> cont;
-    vector<double>& operator[](const int ind){
-        if (ind > 2){ int failboat = 1/0;}
-        return cont[ind];
-    }
-};
-#else
-typedef vector<double> Circle;
-typedef vector<double> Eqn;
-#endif
-
-
-double event_change_phi(unsigned short* event, double new_phi){
+void event_change_phi(unsigned short* event, double new_phi){
     for(size_t i = 0; i < 8; ++i)
     {
         event[i*3 + 2] *= (new_phi/phi);
     }
     phi = new_phi;
-    return phi;
+    return;
 }
-double circs_change_phi(vector< Circle >& circs, double new_phi){
-    for(size_t i = 0; i < circs.size(); ++i)
+void circs_change_phi(double** circs, int num_circs, double* new_phi){
+    for(size_t i = 0; i < num_circs; ++i)
     {
-        circs[i][2] *= (new_phi/phi);
+        circs[i][2] *= (*new_phi/phi);
     }
-    phi = new_phi;
-    return phi;
+    phi = *new_phi;
+    return;
 }
 double max_poss_phi(unsigned short* event){
     double longest_TDC = 0.0;
@@ -64,27 +39,26 @@ double max_poss_phi(unsigned short* event){
                 event[i*3 + 2] : longest_TDC;
     }
     //assuming that the longest count corresponds to 1/2cm
-    return 5000.0/(longest_TDC*tdc_to_ns);
+    return (5000.0/(longest_TDC*tdc_to_ns));
 }
 
 double swap_cosa_sina(const double &triga){
     return sqrt(1.0-triga*triga);
 }
 
-vector<double> vadd_2D(const vector<double> &v1, const vector<double> &v2){
-    vector<double> rtnv(2,v1[0] + v2[0]);
-    rtnv[1] =  v1[1] + v2[1];
-    return rtnv;
+void vadd_2D(const double* v1, const double* v2, double* vout){
+    vout[0] = v1[0] + v2[0];
+    vout[1] = v1[1] + v2[1];
+    return;
 }
-vector<double> vscale_2D(const vector<double> &v1, const double &sf){
-    vector<double> rtnv(v1);
-    rtnv[0] *= sf;
-    rtnv[1] *= sf;
-    return rtnv;
+void vscale_2D(const double* v1, const double* sf, double* vout){
+    vout[0] = v1[0]*(*sf);
+    vout[1] = v1[1]*(*sf);
+    return;
 }
 
-vector<double> vrot_2D(const vector<double> &v, const double &angl_info, 
-const unsigned char angular_type){
+void vrot_2D(const double* v, const double &angl_info, 
+const unsigned char angular_type, double* vout){
     vector<double> rtnv(2,0.0);
     double cosa, sina;
     if (ANGL_T_ANGL(angular_type)){
@@ -103,9 +77,9 @@ const unsigned char angular_type){
             int failboat = 1/0;
         }
     }
-    rtnv[0] = v[0]*cosa - v[1]*sina;
-    rtnv[1] = v[0]*sina + v[1]*cosa;
-    return rtnv;
+    vout[0] = v[0]*cosa - v[1]*sina;
+    vout[1] = v[0]*sina + v[1]*cosa;
+    return;
 }
 
 inline double sina_ext_ctang(const double &len, const Circle &C1, const Circle &C2){
@@ -122,65 +96,59 @@ inline double p_dist_track(const vector<double>& pt, const Eqn& eq){
     return abs(pt[1] - eq[0]*pt[0] - eq[1])/sqrt(1.0+eq[0]*eq[0]);
 }
 
-vector<double> unit_vect_2p(const vector<double>& P1, const vector<double>& P2,
-double& out_len, double *out_dxdy){
+void unit_vect_2p(const vector<double>& P1, const vector<double>& P2,
+double& out_len, double *out_dxdy, double* vout){
     out_dxdy[0] = P2[0] - P1[0];
     out_dxdy[1] = P2[1] - P1[1];
     out_len = sqrt(out_dxdy[0]*out_dxdy[0] + out_dxdy[1]*out_dxdy[1]);
-    vector<double> rtnv(2,out_dxdy[0]/out_len);
-    rtnv[1] = out_dxdy[1]/out_len;
-    return rtnv;
+    vout[0] = (out_dxdy[0]/out_len);
+    vout[1] = out_dxdy[1]/out_len;
+    return;
 } 
 
-/*void micron_grid(vector< vector<double> >& grid){
-    for(size_t i = 0; i < 8; i++)
-        for(size_t j = 0; j < 8; j++)
-            grid[i][j] = j*10000.0 + ( (j&1) ? 5000.0 : 0.0 );  
-}*/
-
-bool line_miss_all_others(const vector< Circle >& circs, const Eqn& eq,
+bool line_miss_all_others(const double** circs, const double* eq,
 const int ln_btw[]){
     for(size_t i = 0; i < 8; i++){
         if( i == ln_btw[0] || i == ln_btw[1])
             continue;
         double leng = p_dist_track(circs[i], eq);
-        //cout << "--leng: " << leng << "\t rad: " << circs[i][2] << endl;
         if (leng < circs[i][2])
             return false;
     }
     return true;
 }
 
-Eqn v_pt_line(const vector<double>& V1, const vector<double>& pt){
-    Eqn eq(3, V1[1]/V1[0]);
-    eq[1] = pt[1] - eq[0]*pt[0];
-    eq[2] = sqrt(1.0+eq[0]*eq[0]);
-    return eq;
+void v_pt_line(const double* V1, const double* pt, double* eqn_out){
+    eqn_out[0] = (V1[1]/V1[0]);
+    eqn_out[1] = pt[1] - eq[0]*pt[0];
+    eqn_out[2] = sqrt(1.0+eq[0]*eq[0]);
+    return;
 }       
 
 #define first_sX_sR(a) (a == 0)
 #define first_sX_lR(a) (a == 1)
 #define first_lX_sR(a) (a == 2)
 #define first_lX_lR(a) (a == 3)
-char sort_circ_ind(const vector< Circle >& circs){
-    return ((char(circs[0][0] > circs[1][0]) << 1) || 
-        (char(circs[0][2] > circs[1][2]) << 0));
+char sort_circ_ind(const double** extremal_circs){
+    return ((char(extremal_circs[0][0] > extremal_circs[1][0]) << 1) || 
+        (char(extremal_circs[0][2] > extremal_circs[1][2]) << 0));
 }
 
 #define TOPE 0
 #define BOTE 1
 #define TOPI 2
 #define BOTI 3
-void pvect(const vector<double>& vect,const string& head="Vect:"){
+void pvect(const double* vect, int vsize, const string& head="Vect:"){
     cout << head <<  " "  << flush;
-    for(size_t i = 0; i < vect.size(); ++i)
+    for(size_t i = 0; i < vsize; ++i)
     {
         cout << " x_"<<i<<": " << vect[i];
     }
     cout << endl;
 }
-void find_com_tang_and_ep(vector< Circle > circs,
-vector< vector<double> >& out_tuv, vector< vector<double> >& out_ep){
+void find_com_tang_and_ep(double** circs,
+double** out_tuv, double** out_ep){
+    double* extremal_circs[] = {circs[0],circs[1]};
     char sort_in = sort_circ_ind(circs);
     //now circs[0] is always lower in x
     //bitflip to swap weather circs[0] was remebered as having larger R
