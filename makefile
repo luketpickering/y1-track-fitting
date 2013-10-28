@@ -14,7 +14,10 @@ notest:
 	$(GCC) main.cpp -o main.out $(OPTS)
 
 debug:
-	$(GCC) tests.cpp -o test.out $(OPTS) -DDEBUG
+	$(GCC) tests.cpp -g -o test.out $(OPTS) -DDEBUG
 	./test.out
-	$(GCC) main.cpp -o main.out $(OPTS) -DDEBUG
+	$(GCC) main.cpp -g -o main.out $(OPTS) -DDEBUG
 
+notestdebug:
+	$(GCC) main.cpp -g -o main.out $(OPTS) -DDEBUG
+	

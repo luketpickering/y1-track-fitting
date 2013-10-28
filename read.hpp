@@ -5,6 +5,7 @@
 using std::endl;
 using std::cerr;
 using std::ifstream;
+using std::ios;
 // ----------------------END USING STATEMENTS------------------------
 
 // --------------------------START GLOBALS---------------------------
@@ -36,13 +37,13 @@ bool stream_init(char *fn){
     return ifs.good();
 }
 
-bool get_event(unsigned short* hits){
-    static unsigned char temp[16];
+bool get_event(unsigned short** hits){
+    unsigned char temp[16];
     if(!ifs.good() || ifs.eof())
         return false;
     ifs.read((char*)temp , 16);
     for (char ctr = 0; ctr < 8; ctr += 1)
-        parse_event((temp + (ctr*2)), hits + (ctr*3) );
+        parse_event((temp + (ctr*2)), hits[ctr]);
     return !ifs.eof();
 }
 // --------------------------END READ FUNCS--------------------------

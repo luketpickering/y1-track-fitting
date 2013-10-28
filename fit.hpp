@@ -21,17 +21,17 @@ void event_change_phi(unsigned short* event, double new_phi){
   phi = new_phi;
   return;
 }
-void circs_change_phi(double** circs, int num_circs, double* new_phi){
+void circs_change_phi(double** circs, int num_circs, double new_phi){
   for(size_t i = 0; i < num_circs; ++i)
-    circs[i][2] *= (*new_phi/phi);
-  phi = *new_phi;
+    circs[i][2] *= (new_phi/phi);
+  phi = new_phi;
   return;
 }
-double max_poss_phi(unsigned short* event){
+double max_poss_phi(unsigned short** event){
   double longest_TDC = 0.0;
   for(size_t i = 0; i < 8; ++i){
-    longest_TDC = (event[i*3 + 2] > longest_TDC) ? 
-      event[i*3 + 2] : longest_TDC;
+    longest_TDC = (event[i][2] > longest_TDC) ? 
+      event[i][2] : longest_TDC;
   }
   //assuming that the longest count corresponds to 1/2cm
   return (5000.0/(longest_TDC*tdc_to_ns));
@@ -46,15 +46,14 @@ void vadd_2D(const double* v1, const double* v2, double* vout){
   vout[1] = v1[1] + v2[1];
   return;
 }
-void vscale_2D(const double* v1, const double* sf, double* vout){
-  vout[0] = v1[0]*(*sf);
-  vout[1] = v1[1]*(*sf);
+void vscale_2D(const double* v1, const double& sf, double* vout){
+  vout[0] = v1[0]*(sf);
+  vout[1] = v1[1]*(sf);
   return;
 }
 
 void vrot_2D(const double* v, const double &angl_info, 
 	     const unsigned char angular_type, double* vout){
-  vector<double> rtnv(2,0.0);
   double cosa, sina;
   if (ANGL_T_ANGL(angular_type)){
     cosa = cos(angl_info);
@@ -76,27 +75,27 @@ void vrot_2D(const double* v, const double &angl_info,
   return;
 }
 
-inline double sina_ext_ctang(const double &len, const Circle &C1, const Circle &C2){
+inline double sina_ext_ctang(const double &len, const double* C1, const double* C2){
 #ifdef DEBUG
   if ((C2[2] - C1[2])<0.0){ int failboat = 1/0;}
 #endif
   return (C2[2] - C1[2])/len;
 }
-inline double sina_int_ctang(const double &len, const Circle &C1, const Circle &C2){
+inline double sina_int_ctang(const double &len, const double* C1, const double* C2){
   return (C2[2] + C1[2])/len;
 }
 
-inline double p_dist_track(const vector<double>& pt, const Eqn& eq){
-  return abs(pt[1] - eq[0]*pt[0] - eq[1])/sqrt(1.0+eq[0]*eq[0]);
+inline double p_dist_track(const double* pt, const double* eq){
+  return abs(pt[1] - eq[0]*pt[0] - eq[1])/eq[2];
 }
 
-void unit_vect_2p(const vector<double>& P1, const vector<double>& P2,
-		  double& out_len, double *out_dxdy, double* vout){
-  out_dxdy[0] = P2[0] - P1[0];
-  out_dxdy[1] = P2[1] - P1[1];
-  out_len = sqrt(out_dxdy[0]*out_dxdy[0] + out_dxdy[1]*out_dxdy[1]);
-  vout[0] = (out_dxdy[0]/out_len);
-  vout[1] = out_dxdy[1]/out_len;
+void unit_vect_2p(const double* P1, const double* P2,
+		  double* vout){
+  double dx = P2[0] - P1[0];
+  double dy = P2[1] - P1[1];
+  vout[2] = sqrt(dx*dx + dy*dy);
+  vout[0] = dx/vout[2];
+  vout[1] = dy/vout[2];
   return;
 } 
 
@@ -114,8 +113,8 @@ bool line_miss_all_others(const double** circs, const double* eq,
 
 void v_pt_line(const double* V1, const double* pt, double* eqn_out){
   eqn_out[0] = (V1[1]/V1[0]);
-  eqn_out[1] = pt[1] - eq[0]*pt[0];
-  eqn_out[2] = sqrt(1.0+eq[0]*eq[0]);
+  eqn_out[1] = pt[1] - eqn_out[0]*pt[0];
+  eqn_out[2] = sqrt(1.0+eqn_out[0]*eqn_out[0]);
   return;
 }       
 
@@ -137,17 +136,17 @@ void pavect(const double** vects, int asize, int vsize){
     pvect(vects[i],vsize);
   return;
 }
-void find_com_tang_and_ep(double** extremal_circs, const double* c2c_uv,
+void find_com_tang_and_ep(const double** extremal_circs, const double* c2c_uv,
 			  double** out_tuv, double** out_ep){
 
-  static double* pert_angls[4];
-  static double temp[2], rad_vect[2];
+  double pert_angls[4];
+  double temp[2], rad_vect[2];
   vscale_2D(c2c_uv, extremal_circs[0][2], rad_vect);
 
   //Atempt to do it in one
-  if(extremal_circs[0][2] < extremal_circ[1][2]){
-    double a_ext = asin(sina_ext_ctang(len, extremal_circs[0], extremal_circs[1]));
-    double a_int = asin(sina_int_ctang(len, extremal_circs[0], extremal_circs[1]));
+  if(extremal_circs[0][2] < extremal_circs[1][2]){
+    double a_ext = asin(sina_ext_ctang(c2c_uv[2], extremal_circs[0], extremal_circs[1]));
+    double a_int = asin(sina_int_ctang(c2c_uv[2], extremal_circs[0], extremal_circs[1]));
     double a90pa_ext = 90.0*pi/180.0 + a_ext;
     double a90na_int = 90.0*pi/180 - a_int;
 
@@ -155,8 +154,8 @@ void find_com_tang_and_ep(double** extremal_circs, const double* c2c_uv,
     pert_angls[2] = a90pa_ext; pert_angls[3] = a90na_int;
 
   } else{
-    double a_ext = acos(sina_ext_ctang(len, extremal_circs[1], extremal_circs[0]));
-    double a_int = acos(sina_int_ctang(len, extremal_circs[1], extremal_circs[0]));
+    double a_ext = acos(sina_ext_ctang(c2c_uv[2], extremal_circs[1], extremal_circs[0]));
+    double a_int = acos(sina_int_ctang(c2c_uv[2], extremal_circs[1], extremal_circs[0]));
     double a90_mext = 90.0*pi/180.0 - a_ext;
     double a90_mint = 90.0*pi/180.0 - a_int;
 
@@ -178,14 +177,21 @@ void find_com_tang_and_ep(double** extremal_circs, const double* c2c_uv,
   return;
 }
 
-bool check_miss(const double** circs, const double* c2c_uv, const int* tans_betw){
-  static double epTE[2],epBE[2],epTI[2],epBI[2];
-  static double* ep[] = {epTE,epBE,epTI,epBI};
-  static double tuvTE[2],tuvBE[2],tuvTI[2],tuvBI[2];
-  static double* tuv[] = {tuvTE,tuvBE,tuvTI,tuvBI};
+unsigned int check_miss(const double** circs, const double* c2c_uv, const int* tans_betw){
+  double ep1[8];
+  double* ep[] = {ep1,ep1+2,ep1+4,ep1+6};
+  
+  double tuv1[8];
+  double* tuv[] = {tuv1,tuv1+2,tuv1+4,tuv1+6};
+  
+  double eqn1[12];
+  double* eqn[] = {eqn1,eqn1+3,eqn1+6,eqn1+9}; 
 
-  static double* extremal_circs[2];
-
+  const double* extremal_circs[2];
+  
+  unsigned int num_lines_missed = 0;
+  unsigned int lines_missed = 0;
+  
   //ensure extremal_circs[0] is always lower in x
   if(circs[tans_betw[0]][0] < extremal_circs[tans_betw[1]][0]){ 
     extremal_circs[0] = circs[tans_betw[0]];
@@ -194,6 +200,16 @@ bool check_miss(const double** circs, const double* c2c_uv, const int* tans_betw
     extremal_circs[1] = circs[tans_betw[0]];
     extremal_circs[0] = circs[tans_betw[1]];
   }
+  
+  find_com_tang_and_ep(extremal_circs, c2c_uv, tuv, ep);
+  for(size_t i = 0; i < 4; ++i){
+      v_pt_line(tuv[i],ep[i],eqn[i]);
+      if(line_miss_all_others(circs,eqn[i], tans_betw)){
+          lines_missed ^= (1 << i);
+          num_lines_missed++;
+      }
+  }
+  return num_lines_missed;
 }
     
     /*
