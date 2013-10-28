@@ -97,6 +97,7 @@ int main(int argv, char* argc[]){
                  << "\tsteps required:" << stepcnt
                  << "\tphi_init = " << phi_init
                  << "\tphi calc = " << c_phi << endl << endl;
+	    return 0;
         }
     }
     cout << sum_phi << " " << cnt << " avg phi = " << (sum_phi/double(cnt)) << endl;
