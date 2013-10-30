@@ -13,6 +13,8 @@ verbose:
 notest:
 	$(GCC) main.cpp -o main.out $(OPTS)
 
+notestfast:
+	$(GCC) main.cpp -o fast.out -O1
 debug:
 	$(GCC) tests.cpp -g -o test.out $(OPTS) -DDEBUG
 	./test.out
