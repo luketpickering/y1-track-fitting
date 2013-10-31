@@ -185,17 +185,25 @@ int main(int argv, char* argc[]){
                 //}
             }
         }
-        if (!(cnt%10000)) { 
-            cerr << "Read event:" << cnt+1 << endl
+        if(!(cnt%1000)){
+            for(size_t i = 0; i < stepcnt; ++i)
+            {
+              //  cout << "  " << flush; 
+            }
+            //cerr << "*" << flush;
+        }
+        /*if (!(cnt%10000)) { 
+            cerr << endl << "Read event:" << cnt+1 << endl
                  //<< "\tsteps required:" << stepcnt
                  //<< "\tphi_init = " << phi_init
                  //<< "\tphi calc = " << c_phi << endl << endl;
                 ;
-        }
+        }*/
     }
     //cout << sum_phi << " " << cnt << " avg phi = " << (sum_phi/double(cnt)) << endl;
     //cout << "avg# steps = " << (float(tstepcnt)/float(cnt)) << endl;
     //cerr << "crappy_e = " << crappy_e << endl;
+    //cerr << endl;
     return 0;
 }
 

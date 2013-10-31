@@ -1,5 +1,5 @@
 GCC=g++
-OPTS=-O0
+OPTS=-O0 -DWSNOW
 
 default:
 	$(GCC) tests.cpp -o test.out $(OPTS)
