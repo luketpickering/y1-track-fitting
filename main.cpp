@@ -22,7 +22,7 @@ const bool quiet = true;
 // ---------------------------UTIL FUNCS-----------------------------
 
 void print_soln(double** circs, double** eqns, int eqn_to_print){
-    cout << "Funky Soln" << endl << endl;
+    cout << "Proffered Soln" << endl << endl;
     
     for(size_t i = 0; i < 8; ++i)
     {
@@ -78,10 +78,9 @@ int main(int argv, char* argc[]){
     int stepcnt = 0;
     double sum_phi = 0.0;
     int btwn[2] = {0,7};
-    int crappy_e = 0;
-    //int max_tdc = 0;
-    //int second_max_tdc = 0;
+    int ambig_ev = 0;
     double phi_step = 1.0;
+    double sum_alph = 0.0;
 
     
     while(get_event(event)){
@@ -96,28 +95,14 @@ int main(int argv, char* argc[]){
             if (i == 0)
                 e0y = circs[i][1];
             sumy += circs[i][1] - e0y;
-                    
-            /*            if( event[i][2] > max_tdc){
-                btwn[1] = btwn[0];
-                btwn[0] = i;
-                max_tdc = event[i][2];
-                second_max_tdc = event[btwn[1]][2];
-            } else if (event[i][2] > second_max_tdc){
-                btwn[1] = i;
-                second_max_tdc = event[i][2];
-            }*/
-           // cout << all_circs[i][0] << " " << all_circs[i][1] << " " 
-             //   << all_circs[i][2] << endl;
         }
         if(abs(sumy)>27.0*5000.0){
-            //cerr << "found crappy event" << endl;
-            crappy_e++;
+            ambig_ev++;
             continue;
         }
     
         double phi_init = max_poss_phi(event);
-        phi_step = 0.01*phi_init;
-        //cerr << phi_init << endl;
+        phi_step = 0.1*phi_init;
         circs_change_phi(circs, 8, phi_init);
         double c_phi = phi_init;
         bool found_ln = false;
@@ -131,6 +116,7 @@ int main(int argv, char* argc[]){
         bool glob_minll_changed;
         int glob_min_ln;
         
+        
         unit_vect_2p(circs[btwn[0]],circs[btwn[1]],c2c_uv);
         
         while (c_phi > 0.0 && !found_ln){
@@ -139,7 +125,6 @@ int main(int argv, char* argc[]){
             c_phi -= phi_step;
             glob_minll_changed = false;
             
-            //num_lines_miss = check_miss((const double**)circs, c2c_uv, btwn, eqns);
             nll_array((const double**)circs, c2c_uv, btwn, eqns, nll);
             for(size_t i = 0; i < 4; ++i)
             {
@@ -147,63 +132,28 @@ int main(int argv, char* argc[]){
                     nll[i] = mnll[i];
                 }
                 if(nll[i] < glob_minll){
-                    //cout << "glob min: " << glob_minll << ", nmin: " << nll[i] 
-                      //  << ", line: " << i << ", phi: " << c_phi << endl;
                     glob_minll = nll[i];
                     glob_min_ln = i;
                     glob_minll_changed = true;
                 }
             }
-            //pvect(circs[0]);pvect(circs[1]);
-                /*cout << "Phi:" << c_phi << endl 
-                    << "Edge Points: " << ep[i][0] << " " << ep[i][1] << endl
-                        << "UV = " << tuv[i][0] << " " << tuv[i][1] << endl
-                            << "Eqn: y = " << ln_eq[0] << "x + " << ln_eq[1] << endl 
-                                << "Line misses all others? " << miss << endl << endl;
-                
-            //if (num_lines_miss == 2){print_soln(circs,eqns,15);return 0;}
-            
-            if ((llm == 3) && (num_lines_miss == 4)){
-                    cnt += 1; sum_phi += c_phi; found_ln = true;
-                    if (c_phi < 10.0){
-                        print_soln(circs,eqns,15);
-                        return 0;
-                    }
-                    break;
-                 }
-            llm = num_lines_miss;*/
+
             if(!glob_minll_changed){
                 found_ln = true;
-                //cout << c_phi << endl;
                 cnt += 1; 
-                //sum_phi += c_phi; found_ln = true; tstepcnt += stepcnt;
-                //cout << "found line at: " << c_phi << endl;
-                //if(abs(c_phi - 26.0) > 5.0){
-                  //  print_soln(circs, eqns, 15);
-                    //        cout << endl << endl << "minlhood: " << glob_minll << endl;
-                    //return 0;
-                //}
+                sum_phi += c_phi; found_ln = true; tstepcnt += stepcnt;
+                sum_alph += atan(eqns[glob_min_ln][0]);
+                
+                //cout << glob_min_ln <<  endl;
+                cout << atan(eqns[glob_min_ln][0])*(180.0/3.1415) << "\n";
             }
         }
-        if(!(cnt%1000)){
-            for(size_t i = 0; i < stepcnt; ++i)
-            {
-              //  cout << "  " << flush; 
-            }
-            //cerr << "*" << flush;
-        }
-        /*if (!(cnt%10000)) { 
-            cerr << endl << "Read event:" << cnt+1 << endl
-                 //<< "\tsteps required:" << stepcnt
-                 //<< "\tphi_init = " << phi_init
-                 //<< "\tphi calc = " << c_phi << endl << endl;
-                ;
-        }*/
+
     }
-    //cout << sum_phi << " " << cnt << " avg phi = " << (sum_phi/double(cnt)) << endl;
-    //cout << "avg# steps = " << (float(tstepcnt)/float(cnt)) << endl;
-    //cerr << "crappy_e = " << crappy_e << endl;
-    //cerr << endl;
+    
+    cout << flush;
+    cerr << sum_phi << " " << cnt << " avg phi = " << (sum_phi/double(cnt)) << endl;
+    cerr << "avg# steps = " << (float(tstepcnt)/float(cnt)) << " avg angl = " << (sum_alph/double(cnt))*(180.0/3.1415) << endl;
     return 0;
 }
 

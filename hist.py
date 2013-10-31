@@ -2,7 +2,6 @@
 import matplotlib.pyplot as plt
 from sys import argv
 
-plt.xkcd()
 x = []
 
 data_file = None
@@ -17,5 +16,5 @@ for line in data_file:
     lc += 1
     x.append(float(line))
     
-plt.hist(x,30, (30.0,100))
+plt.hist(x,50)
 plt.show()

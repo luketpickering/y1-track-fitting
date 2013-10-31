@@ -87,7 +87,7 @@ inline double sina_int_ctang(const double &len, const double* C1, const double* 
 }
 
 inline double p_dist_track(const double* pt, const double* eq){
-    return abs(pt[1] - eq[0]*pt[0] - eq[1])/eq[2];
+    return abs(pt[1] - eq[0]*pt[0] - eq[1])*eq[2];
 }
 
 void unit_vect_2p(const double* P1, const double* P2,
@@ -126,7 +126,7 @@ double neg_log_lhood(const double** circs, const double* eq, const int ln_btw[])
 void v_pt_line(const double* V1, const double* pt, double* eqn_out){
     eqn_out[0] = (V1[1]/V1[0]);
     eqn_out[1] = pt[1] - eqn_out[0]*pt[0];
-    eqn_out[2] = sqrt(1.0+eqn_out[0]*eqn_out[0]);
+    eqn_out[2] = 1.0/sqrt(1.0+eqn_out[0]*eqn_out[0]);
     return;
 }       
 

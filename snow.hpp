@@ -4,6 +4,7 @@
 // ---------------------START USING STATEMENTS-----------------------
 using std::endl;
 using std::cout;
+using std::cerr;
 using std::flush;
 // ----------------------END USING STATEMENTS------------------------
 
@@ -17,9 +18,10 @@ static int row_len;
 static int len;
 static int ectr = 0;
 static bool filled = false;
+static typeof(cout) *out;
 
 static void sno_shift_print(){
-    cout << endl;
+    (*out) << endl;
     for(int i = rows-1; i >= 0; --i)
         for(size_t j = 0; j < row_len; ++j)
             snow[(i+1)*row_len + j] = snow[i*row_len+j];
@@ -28,27 +30,27 @@ static void sno_shift_print(){
     {
         if((i <= 2*row_len-1) || (i > (len-row_len-1))){
             for(size_t j = 0; j < 8; ++j)
-                cout << "|";
+                (*out) << "|";
             continue;
          }
         for(size_t j = 0; j < 8; ++j)
         {
             if(!(i%row_len) && j < 2){
-                cout << "|";
+                (*out) << "|";
                 continue;
             }
             else if(!((i+1)%row_len) && j > 5){
-                cout << "|";
+                (*out) << "|";
                 continue;
             }
             else if((snow[i] >> j)&1){
-                cout << "*";
+                (*out) << "*";
             }else{
-                cout << " ";
+                (*out) << " ";
             }
         }
     }
-    cout << flush;   
+    (*out) << flush;   
 }
 void init_with_snow(){
     
@@ -58,8 +60,12 @@ void init_with_snow(){
     true_rows = w.ws_row;
     cols = w.ws_col;
     
-    std::cerr << true_rows << " " << cols << endl;
-    
+#ifndef SNOW_COUT
+    out = &cerr;
+#else
+    out = &cout;
+#endif
+        
     rows = true_rows+1;
     len = cols*rows/(sizeof(unsigned char)*8);
     row_len = cols/(sizeof(unsigned char)*8);
