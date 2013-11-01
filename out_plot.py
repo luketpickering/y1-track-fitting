@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sys import argv
 
 #plt.xkcd()
-
+print "starting."
 color_ring = ['red','green','blue','purple']
 
 def get_xy_from_m_c(ln):
@@ -43,7 +43,7 @@ for i, line in enumerate(data_file):
         eqs.append([float(x) for x in raw])
     else:
         raise IOError
-        
+print "trying to plot."
 fig = plt.gcf()
 for c in CA:
     print c
