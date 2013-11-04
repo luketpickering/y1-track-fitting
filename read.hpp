@@ -51,7 +51,7 @@ bool get_event(unsigned short** hits){
         return false;
     ifs.read((char*)temp , 16);
 #ifdef WSNOW
-    read_with_snow(temp,16,15000);
+    read_with_snow(temp,16,50000);
 #endif
     for (char ctr = 0; ctr < 8; ctr += 1)
         parse_event((temp + (ctr*2)), hits[ctr]);

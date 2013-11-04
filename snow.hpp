@@ -4,6 +4,7 @@
 // ---------------------START USING STATEMENTS-----------------------
 using std::endl;
 using std::cout;
+using std::cin;
 using std::cerr;
 using std::flush;
 // ----------------------END USING STATEMENTS------------------------
@@ -19,6 +20,7 @@ static int len;
 static int ectr = 0;
 static bool filled = false;
 static typeof(cout) *out;
+static bool do_snow = false;
 
 static void sno_shift_print(){
     (*out) << endl;
@@ -60,6 +62,8 @@ void init_with_snow(){
     true_rows = w.ws_row;
     cols = w.ws_col;
     
+    cout << true_rows << " " << cols << endl;
+    
 #ifndef SNOW_COUT
     out = &cerr;
 #else
@@ -69,15 +73,22 @@ void init_with_snow(){
     rows = true_rows+1;
     len = cols*rows/(sizeof(unsigned char)*8);
     row_len = cols/(sizeof(unsigned char)*8);
+    if(cols%(sizeof(unsigned char)*8)){char pholder;(*out) << "Please resize your terminal to width:" 
+        << row_len*8 << " or this will be ugly.[Type any character to continue.]" << endl; 
+    cin >> &pholder; (*out) << endl; }
+    if(row_len > 0 && len > 0){do_snow = true;}
     snow = new unsigned char[len];
 }
 void read_with_snow(const unsigned char* dat, int arsize, int freq){
-    
+    if(!snow){return;}
     ectr++;
     if(!filled || !(ectr%freq)){
         for(size_t i = osc; i < (arsize+osc) ; ++i){
             snow[sno_ctr] = dat[i%arsize];
             sno_ctr++;
+            //cout << "sc " << sno_ctr << ", row_len " << row_len 
+              //  << ", cols " << cols << ", rows" << rows << endl;
+
             if(!filled){
                 if (sno_ctr == len){
                     filled = true;
@@ -85,7 +96,8 @@ void read_with_snow(const unsigned char* dat, int arsize, int freq){
                 }else{
                     continue;
                 }
-            }else if(!(sno_ctr%row_len)){
+            }
+            if(sno_ctr == row_len){
                 sno_shift_print();
                 osc = i % arsize;
                 sno_ctr = 0;

@@ -53,25 +53,42 @@ int main(int argv, char* argc[]){
     int stpcnt;
     int no_min = 0;
     
+    //stats
+    double running_mean_phi = 52.0;
+    double sq_sum_phi = 0.0;
+    double running_2nd_mmt = 0.0;
+    double stdv_phi = 0.0;
+    
     while(get_event(event)){
-        stpcnt = min_nll_for_ev((const unsigned short**)event,c_phi,c_alph,c_ln);
+        if(stdv_phi < 1e-6){
+            stdv_phi = 52.0/5.0;
+            cerr << "used default stdv on step:" << cnt << endl;
+        }
+        stpcnt = min_nll_for_ev((const unsigned short**)event, running_mean_phi, stdv_phi, c_phi, c_alph, c_ln);
         
         if(c_ln == -1){
             ambig_ev++;
         }else if (c_ln == -2){
             no_min++;
         }else {
-            sum_phi += c_phi;
+            sum_phi += c_phi; 
+            sq_sum_phi += (c_phi*c_phi);  
             sum_alph += c_alph;
+            
             cnt++;
             tstepcnt += stpcnt;
-        }
-        
+            
+            running_mean_phi = sum_phi/double(cnt);
+            running_2nd_mmt = sq_sum_phi/double(cnt);
+            stdv_phi = sqrt(running_2nd_mmt - running_mean_phi*running_mean_phi);
+            cout << c_phi << "\t" << c_alph << '\n';
+            //cout << "cnt:" << cnt << " " << running_mean_phi << " " << stdv_phi << " steps: " << stpcnt << endl;
+        }        
     }
     
     cout << flush;
     cerr << sum_phi << " " << cnt << " ambig_steps = " << ambig_ev << " no_min = " << no_min << endl 
-         << "avg phi = " << (sum_phi/double(cnt)) << endl;
+         << "avg phi = " << running_mean_phi << "+/-" << stdv_phi << endl;
     cerr << "avg# steps = " << (float(tstepcnt)/float(cnt)) << " avg angl = " 
          << (sum_alph/double(cnt))*(180.0/3.1415) << endl;
     return 0;

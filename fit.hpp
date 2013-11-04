@@ -2,12 +2,13 @@
 #include <string>
 #include <iomanip>
 #include <limits>
+#include <math.h>
 using std::numeric_limits;
 
 using std::cout; using std::flush; 
 using std::endl; using std::string;
 using std::abs; using std::setw;
-using std::acos;
+using std::acos; using std::ceil;
 using std::sqrt;
 
 
@@ -37,7 +38,7 @@ inline void circs_change_phi(double** circs, int num_circs, double new_phi, doub
         circs[i][2] *= (new_phi/old_phi);
     return;
 }
-double max_poss_phi(const unsigned short** event){
+inline double max_poss_phi(const unsigned short** event){
     double longest_TDC = 0.0;
     for(size_t i = 0; i < 8; ++i){
         longest_TDC = (event[i][2] > longest_TDC) ? 
@@ -51,7 +52,7 @@ inline double p_dist_track(const double* pt, const double* eq){
     return abs(pt[1] - eq[0]*pt[0] - eq[1])/eq[2];
 }
 
-double neg_log_lhood(const double** circs, const double* eq, const int ln_btw[]){
+inline double neg_log_lhood(const double** circs, const double* eq, const int ln_btw[]){
     double nll = 0.0;
     for(size_t i = 0; i < 8; i++){
         if( i == ln_btw[0] || i == ln_btw[1])
@@ -99,11 +100,10 @@ inline void get_com_tang_eqns(const double **extr_circs, const double* pre_calc,
     out_eqn[0] = -1.0*a/b;
     out_eqn[1] = -1.0*c/b;
     out_eqn[2] = sqrt(1.0+out_eqn[0]*out_eqn[0]);
-    //cout << nr << " " << nr << " " << k << " " << R << " " << a << " " << b << " " << c << endl;
 }
 
 
-void nll_array(const double** circs, const int* tans_betw,
+inline void nll_array(const double** circs, const int* tans_betw,
 double** eqn, double* nll){
 
     const double* extremal_circs[2];
@@ -130,74 +130,121 @@ double** eqn, double* nll){
     return;
 }
 
-int min_nll_for_ev(const unsigned short** ev, double& out_min_phi, double& out_min_alph, int& out_min_ln){
+inline bool parse_event(const unsigned short** ev, const double& phi_init, double **out_circs){
+    int e0y = 0;
+    int sumy = 0;
     
-    int e0y = 0.0;
-    int sumy = 0.0;
-    double phi_init = max_poss_phi(ev);
-    double eqn1[12];
-    double* eqns[] = {eqn1,eqn1+3,eqn1+6,eqn1+9};
-    double c_array[24];
-    double* circs[8] = {c_array, c_array+3, c_array+6, c_array+9, c_array+12, c_array+15, c_array+18, c_array+21};
-        
     for(size_t i = 0; i < 8; i++)
     {
-        circs[i][0] = ev[i][0]*10000.0;
-        circs[i][1] = ev[i][1]*10000.0 + (int(i%2))*5000.0;
-        circs[i][2] = ev[i][2]*tdc_to_ns*phi_init;
+        out_circs[i][0] = ev[i][0]*10000.0;
+        out_circs[i][1] = ev[i][1]*10000.0 + (int(i%2))*5000.0;
+        out_circs[i][2] = ev[i][2]*tdc_to_ns*phi_init;
         if (i == 0)
             e0y = ev[i][1]*2;
         sumy += ev[i][1]*2 + (ev[i][0]%2) - e0y;
-        //cout << sumy << endl;
     }
     if(abs(sumy)>27){
+        return false;
+    }
+    return true;
+}
+
+int min_ind(const double* arr, int size){
+    int mini;
+    for(size_t i = 0; i < size; ++i)
+    {
+        mini = arr[i] < arr[mini] ? i : mini;
+    }
+    return mini;
+}
+
+int min_nll_for_ev(const unsigned short** ev,const double& init_phi, const double& phi_sig, double& out_min_phi, 
+    double& out_min_alph, int& out_min_ln){
+        
+    double c_array[24];
+    double* circs[8] = {c_array, c_array+3, c_array+6, c_array+9, c_array+12, c_array+15, c_array+18, c_array+21};
+
+    double eqn1[12];
+    double* eqns[] = {eqn1,eqn1+3,eqn1+6,eqn1+9};
+    int lns_to_prop = 15;
+    int btwn[2] = {0,7};
+    double max_phi = max_poss_phi(ev);
+    
+    const double phi_resolution = 0.01;
+    double step_size = phi_resolution;
+    double search_dist = 5.0;
+    
+    double range[2] = {init_phi - search_dist*phi_sig, init_phi + search_dist*phi_sig};
+    range[0] = (range[0] < phi_resolution ) ? phi_resolution : range[0];
+    range[1] = (range[1] > max_phi) ? max_phi : range[1];
+    
+    if(!parse_event(ev, range[0], circs)){
         out_min_ln = -1;
-        out_min_phi = 0.0;
         return 0;
     }
     
-    double phi_step = 0.01*phi_init;
-    double c_phi = phi_init;
-    int stepcnt = 0;
-    double nll[4];
-    double mnll[4] = {numeric_limits<float>::max()};
-    double glob_minll = numeric_limits<float>::max();
-    bool glob_minll_changed;
-    int glob_min_ln;
-    int lns_to_prop = 15;
-    int btwn[2] = {0,7};
-            
-    while (c_phi > 0.0){
-        stepcnt++;
-        circs_change_phi(circs, 8, c_phi - phi_step, c_phi);
-        c_phi -= phi_step;
-        glob_minll_changed = false;
-        
-        nll_array((const double**)circs, btwn, eqns, nll);
-        for(size_t i = 0; i < 4; ++i)
-        {
-            //cout << nll[i] << endl;
-            if((lns_to_prop & (1 << i)) 
-            && (nll[i] < mnll[i])){
-                nll[i] = mnll[i];
-            }
-            if((lns_to_prop & (1 << i)) 
-            && (nll[i] < glob_minll)){
-                glob_minll = nll[i];
-                glob_min_ln = i;
-                glob_minll_changed = true;
-            }
-        }
+    int steps = (range[1] - range[0])/phi_resolution;
 
-        if(!glob_minll_changed){
-            out_min_alph = atan(eqns[glob_min_ln][0]);
-            out_min_phi = c_phi;
-            out_min_ln = glob_min_ln;
-            return stepcnt;
-        }
+    if(steps < 10){
+        steps = 10;
+        step_size = (range[1] - range[0])/10.0;
+        //cerr << "too few steps." << endl;
     }
-        out_min_ln = -2;
-        out_min_phi = 0.0;
-        return 0;  
+
+    /*cout << "step deets: " << phi_sig << " " << init_phi << " " << max_phi << " " << steps 
+            << "\n\t\t" << range[0] << "=" << init_phi - search_dist*phi_sig << "<->" << range[1] <<
+                    "=" << init_phi + search_dist*phi_sig <<  endl;*/
+    
+    double max_dbl = numeric_limits<double>::max();
+    
+    int glob_min_ln = -1;
+    double glob_min = max_dbl;
+    double glob_min_phi;
+    double min_llh[] = {max_dbl,max_dbl,max_dbl,max_dbl};
+    double min_phi[4];
+    double min_eqn[8];
+    double* min_eqns[] = {min_eqn,min_eqn+2,min_eqn+2,min_eqn+2};
+    double c_lls[4];
+    double c_phi = range[0];
+      
+    for(size_t i = 0; i < steps; ++i)
+    {        
+        nll_array((const double**)circs, btwn, eqns, c_lls);
+        //cout << c_phi << " " << c_lls[0] << " " << c_lls[1] << " " << c_lls[2] << " " << c_lls[3] << endl;
+        for(size_t j = 0; j < 4; ++j)
+        {
+            if(c_lls[j] < min_llh[j]){
+                if(!isnormal(c_lls[j]))
+                    cerr << "is not normal - lhood " << c_lls[j]  << endl;
+                if(!isnormal(eqns[j][0]))
+                    cerr << "is not normal - grad " << eqns[j][0] << endl;
+                if(!isnormal(eqns[j][1]))
+                    cerr << "is not normal - int " << eqns[j][1] << endl;
+                //cout << "cll:" << c_lls[j] << " " << c_phi << endl;
+                min_llh[j] = c_lls[j];
+                min_phi[j] = c_phi;
+                min_eqns[j][0] = eqns[j][0];
+                min_eqns[j][1] = eqns[j][1];
+            }
+            if(c_lls[j] < glob_min){
+                glob_min_ln = j;
+                glob_min = c_lls[j];
+                glob_min_phi = c_phi;
+                //cout << glob_min_phi << endl;
+            }
+        }
+        circs_change_phi(circs, 8, c_phi + step_size, c_phi);
+        c_phi += step_size;
+    }
+    if(glob_min_ln == -1){
+        cout << "BUGGING OUT:" << range[0] << " " << init_phi << "+/-" << phi_sig << " " << range[1] << " " << max_phi << " steps: " << steps << endl;
+        int *bla = 0;
+        *bla = 1;
+    }
+    
+    out_min_ln = glob_min_ln;
+    out_min_phi = glob_min_phi;
+    out_min_alph = atan(min_eqns[glob_min_ln][0]);
+    return steps;  
     
 }

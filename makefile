@@ -8,9 +8,14 @@ default:
 
 
 debug:
-
 	$(GCC) $(SOURCEF) $(OUT) -g $(OPTS) -DDEBUG
 
 snow:
 	$(GCC) $(SOURCEF) $(OUT) $(OPTS) -DWSNOW
+
+snowdebug:
+	$(GCC) $(SOURCEF) $(OUT) $(OPTS) -DWSNOW -g -DDEBUG
+	
+fast:
+	$(GCC) $(SOURCEF) -o fast.out -ffast-math -O3
 	
