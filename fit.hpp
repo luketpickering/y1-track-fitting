@@ -214,12 +214,12 @@ int min_nll_for_ev(const unsigned short** ev,const double& init_phi, const doubl
         for(size_t j = 0; j < 4; ++j)
         {
             if(c_lls[j] < min_llh[j]){
-                if(!isnormal(c_lls[j]))
-                    cerr << "is not normal - lhood " << c_lls[j]  << endl;
-                if(!isnormal(eqns[j][0]))
-                    cerr << "is not normal - grad " << eqns[j][0] << endl;
-                if(!isnormal(eqns[j][1]))
-                    cerr << "is not normal - int " << eqns[j][1] << endl;
+                //if(!isnormal(c_lls[j]))
+                  //  cerr << "is not normal - lhood " << c_lls[j]  << endl;
+                //if(!isnormal(eqns[j][0]))
+                //    cerr << "is not normal - grad " << eqns[j][0] << endl;
+                //if(!isnormal(eqns[j][1]))
+                 //   cerr << "is not normal - int " << eqns[j][1] << endl;
                 //cout << "cll:" << c_lls[j] << " " << c_phi << endl;
                 min_llh[j] = c_lls[j];
                 min_phi[j] = c_phi;

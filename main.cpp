@@ -7,7 +7,7 @@
 using std::cout;
 using std::cerr;
 using std::endl;
-using std::bitset;
+//using std::bitset;
 using std::setw;
 
 // ----------------------END USING STATEMENTS------------------------
