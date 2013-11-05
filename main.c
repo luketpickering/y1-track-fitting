@@ -53,10 +53,14 @@ int main(int argc, char* argv[]){
     
     if(valid_opts == -1){
         free(opt_b.input_fn);
+        stream_close();
         return -1;
     }
 
-    bool file_ok = stream_init(opt_b.input_fn);
+    if (!stream_init(opt_b.input_fn)){
+        fprintf(stderr, "Failed to read in file.\n");
+        return -1;
+    }
     unsigned short wr[24];
     unsigned short* event[8] = {wr, wr+3, wr+6, wr+9, wr+12, wr+15, wr+18, wr+21};        
     int num_events = 0;
@@ -103,6 +107,7 @@ int main(int argc, char* argv[]){
     fprintf(stderr,"OUT\n\tAvg V_d = %f +/- %f\n\tavg #steps = %f\n\tavg angle = %f\n", 
             running_mean_phi, stdv_phi, ((float)tstepcnt/(float)cnt), 
             (sum_alph/(double)cnt)*(180.0/3.1415));
+    stream_close();
     return 0;
 }
 

@@ -1,13 +1,12 @@
-#include <iostream>
 #include <sys/ioctl.h>
+#include <stdio.h>
 
-// ---------------------START USING STATEMENTS-----------------------
-using std::endl;
-using std::cout;
-using std::cin;
-using std::cerr;
-using std::flush;
-// ----------------------END USING STATEMENTS------------------------
+#ifndef BOOLTDEF
+#define BOOLTDEF
+typedef int bool;
+#define false 0;
+#define true 1;
+#endif
 
 static unsigned char* snow;
 static int sno_ctr = 0;
@@ -19,11 +18,11 @@ static int row_len;
 static int len;
 static int ectr = 0;
 static bool filled = false;
-static typeof(cout) *out;
 static bool do_snow = false;
+static FILE* out_f;
 
 static void sno_shift_print(){
-    (*out) << endl;
+    fprintf(out_f,"\n");
     for(int i = rows-1; i >= 0; --i)
         for(size_t j = 0; j < row_len; ++j)
             snow[(i+1)*row_len + j] = snow[i*row_len+j];
@@ -32,27 +31,27 @@ static void sno_shift_print(){
     {
         if((i <= 2*row_len-1) || (i > (len-row_len-1))){
             for(size_t j = 0; j < 8; ++j)
-                (*out) << "|";
+                fprintf(out_f, "|");
             continue;
          }
         for(size_t j = 0; j < 8; ++j)
         {
             if(!(i%row_len) && j < 2){
-                (*out) << "|";
+                fprintf(out_f, "|");
                 continue;
             }
             else if(!((i+1)%row_len) && j > 5){
-                (*out) << "|";
+                fprintf(out_f, "|");
                 continue;
             }
             else if((snow[i] >> j)&1){
-                (*out) << "*";
+                fprintf(out_f, "*");
             }else{
-                (*out) << " ";
+                fprintf(out_f, " ");
             }
         }
     }
-    (*out) << flush;   
+    fflush(out_f);
 }
 void init_with_snow(){
     
@@ -60,24 +59,24 @@ void init_with_snow(){
     ioctl(0,TIOCGWINSZ, &w);
     
     true_rows = w.ws_row;
-    cols = w.ws_col;
-    
-    cout << true_rows << " " << cols << endl;
-    
+    cols = w.ws_col;    
 #ifndef SNOW_COUT
-    out = &cerr;
+    out_f = stderr;
 #else
-    out = &cout;
+    out_f = stdout;
 #endif
         
     rows = true_rows+1;
     len = cols*rows/(sizeof(unsigned char)*8);
     row_len = cols/(sizeof(unsigned char)*8);
-    if(cols%(sizeof(unsigned char)*8)){char pholder;(*out) << "Please resize your terminal to width:" 
-        << row_len*8 << " or this will be ugly.[Type any character to continue.]" << endl; 
-    cin >> &pholder; (*out) << endl; }
+    if(cols%(sizeof(unsigned char)*8)){
+        fprintf (out_f, "Please resize your terminal to a round multiple of 8 or this will be ugly.\n"
+                        "Press [Enter] to continue . . ." );
+        fflush ( out_f );
+        getchar();
+    }
     if(row_len > 0 && len > 0){do_snow = true;}
-    snow = new unsigned char[len];
+    snow = malloc(sizeof(unsigned char)*len);
 }
 void read_with_snow(const unsigned char* dat, int arsize, int freq){
     if(!snow){return;}
@@ -86,8 +85,6 @@ void read_with_snow(const unsigned char* dat, int arsize, int freq){
         for(size_t i = osc; i < (arsize+osc) ; ++i){
             snow[sno_ctr] = dat[i%arsize];
             sno_ctr++;
-            //cout << "sc " << sno_ctr << ", row_len " << row_len 
-              //  << ", cols " << cols << ", rows" << rows << endl;
 
             if(!filled){
                 if (sno_ctr == len){

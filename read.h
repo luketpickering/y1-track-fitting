@@ -1,10 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #ifdef WSNOW
 #include "snow.h"
 #endif
 
 static FILE* f_ptr;
+static int fd;
+static unsigned char* bdata;
+static struct stat stats;
 
 #ifndef BOOLTDEF
 #define BOOLTDEF
@@ -35,24 +41,35 @@ bool stream_init(char *fn){
     init_with_snow();
 #endif
     
-    f_ptr = fopen(fn, "rb");
-    if( ferror(f_ptr) ){
+    fd = open(fn, O_RDONLY);
+    if( fd == -1 ){
         perror("File is no good:");
-    }   
-    return ferror(f_ptr);
-}
-bool get_event(unsigned short** hits){
-    unsigned char temp[16];
-    
-    if(ferror(f_ptr) || feof(f_ptr))
         return false;
-    fread((void*)temp,sizeof(unsigned char), 16, f_ptr);
+    }   
+    
+    fstat(fd,&stats);
+    fprintf(stderr, "File size = %lld\n", stats.st_size);
+    bdata = mmap(NULL, stats.st_size,PROT_READ,MAP_SHARED,fd,0);
+    if(bdata == MAP_FAILED){
+        perror("Failed to mmap the file.");
+        return false;
+    }
+    return true;
+}
+bool stream_close(){
+    munmap(bdata, stats.st_size);
+    close(fd);
+    return 1;
+}
+static int offset = 0;
+bool get_event(unsigned short** hits){
 #ifdef WSNOW
-    read_with_snow(temp,16,50000);
+    read_with_snow(bdata + offset,16,15000);
 #endif
     for (char ctr = 0; ctr < 8; ctr += 1)
-        parse_event((temp + (ctr*2)), hits[ctr]);
-    return (!feof(f_ptr));
+        parse_event((bdata + offset + (ctr*2)), hits[ctr]);
+    offset += 16;
+    return (offset != stats.st_size); //(!feof(f_ptr));
 }
 // --------------------------END READ FUNCS--------------------------
 

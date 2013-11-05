@@ -1,6 +1,6 @@
-GCC=g++
-OPTS=-O0
-SOURCEF=main.cpp
+GCC=gcc
+OPTS=-lm -O0
+SOURCEF=main.c
 OUT=-o main.out
 
 default:
