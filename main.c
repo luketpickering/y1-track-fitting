@@ -25,31 +25,33 @@ int parse_opts(int argc, char** argv, opts* out_opt_blob){
             case 'f':
                 asprintf(&(out_opt_blob->input_fn),"%s", optarg);
                 reqopts ^= 1;
-                *bla = 1;
                 break;
             case 's':
                 out_opt_blob->step_size = atof(optarg);
                 reqopts ^= 2;
-                *bla = 1;
                 
                 break;
             case 'm':
                 out_opt_blob->min_steps = atoi(optarg);
                 reqopts ^= 4;
-                *bla = 1;
                 
                 break;
             case '?':
                 fprintf(stderr, "Invalid Options.\n Require -f \'filename\' -s <step size> "
                                 "-m <min number of steps>.\n");
+                *bla = 1;
                 return -1;
             default:
+            *bla = 1;
+            
                 return -1;       
         }
     }
     if(reqopts != 7){
         fprintf(stderr, "Requires all options.\n Require -f \'filename\' -s <step size> "
                         "-m <min number of steps>.\n");
+        *bla = 1;
+        
         return -1;
     }
 }
