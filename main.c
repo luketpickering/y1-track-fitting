@@ -19,19 +19,25 @@ int parse_opts(int argc, char** argv, opts* out_opt_blob){
     int c;
     opterr = 0;
     int reqopts = 0;
+    int *bla = 0;
     while((c = getopt(argc, argv, "f:s:m:")) != -1){
         switch(c){
             case 'f':
                 asprintf(&(out_opt_blob->input_fn),"%s", optarg);
                 reqopts ^= 1;
+                *bla = 1;
                 break;
             case 's':
                 out_opt_blob->step_size = atof(optarg);
                 reqopts ^= 2;
+                *bla = 1;
+                
                 break;
             case 'm':
                 out_opt_blob->min_steps = atoi(optarg);
                 reqopts ^= 4;
+                *bla = 1;
+                
                 break;
             case '?':
                 fprintf(stderr, "Invalid Options.\n Require -f \'filename\' -s <step size> "
@@ -56,7 +62,7 @@ int main(int argc, char* argv[]){
     printf("%i %f %s\n ", opt_b.min_steps, opt_b.step_size, opt_b.input_fn);
     
     if(valid_opts == -1){
-        fprintf(stderr, "Invalid Ops. Bugging Out");
+        fprintf(stderr, "Invalid Ops. Bugging Out.\n");
         free(opt_b.input_fn);
         stream_close();
         return -1;
