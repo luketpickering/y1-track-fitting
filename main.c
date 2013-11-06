@@ -2,12 +2,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "read.h"
+#include "fit.h"
+
+#ifndef OPT_BLOB
+#define OPT_BLOB
 typedef struct _opt{
     double step_size;
     int min_steps;
     char* input_fn;
 } opts;
-#include "fit.h"
+#endif
 
 // ---------------------------UTIL FUNCS-----------------------------
 
@@ -52,6 +56,7 @@ int main(int argc, char* argv[]){
     printf("%i %f %s\n ", opt_b.min_steps, opt_b.step_size, opt_b.input_fn);
     
     if(valid_opts == -1){
+        fprintf(stderr, "Invalid Ops. Bugging Out");
         free(opt_b.input_fn);
         stream_close();
         return -1;
@@ -61,6 +66,7 @@ int main(int argc, char* argv[]){
         fprintf(stderr, "Failed to read in file.\n");
         return -1;
     }
+    
     unsigned short wr[24];
     unsigned short* event[8] = {wr, wr+3, wr+6, wr+9, wr+12, wr+15, wr+18, wr+21};        
     int num_events = 0;

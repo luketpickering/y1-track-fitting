@@ -3,19 +3,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const double tdc_to_ns = 0.5;
-#ifndef BOOLTDEF
-#define BOOLTDEF
-typedef int bool;
-#define false 0;
-#define true 1;
+#ifndef OPT_BLOB
+#define OPT_BLOB
+typedef struct _opt{
+    double step_size;
+    int min_steps;
+    char* input_fn;
+} opts;
 #endif
 
-static inline void circs_change_phi(double** circs, int num_circs, double new_phi, double old_phi){
-    for(size_t i = 0; i < num_circs; ++i)
+const double tdc_to_ns = 0.5;
+
+static inline void circs_change_phi(double** circs, 
+                                    double new_phi, 
+                                    double old_phi){
+    for(size_t i = 0; i < 8; ++i)
         circs[i][2] *= (new_phi/old_phi);
     return;
 }
+
 static inline double max_poss_phi(const unsigned short** event){
     double longest_TDC = 0.0;
     for(size_t i = 0; i < 8; ++i){
@@ -26,11 +32,14 @@ static inline double max_poss_phi(const unsigned short** event){
     return (5000.0/(longest_TDC*tdc_to_ns));
 }
 
-static inline double p_dist_track(const double* pt, const double* eq){
+static inline double p_dist_track(const double* pt, 
+                                  const double* eq){
     return abs(pt[1] - eq[0]*pt[0] - eq[1])/eq[2];
 }
 
-static inline double neg_log_lhood(const double** circs, const double* eq, const int ln_btw[]){
+static inline double neg_log_lhood(const double** circs, 
+                                   const double* eq, 
+                                   const int ln_btw[]){
     double nll = 0.0;
     for(size_t i = 0; i < 8; i++){
         if( i == ln_btw[0] || i == ln_btw[1])
@@ -44,7 +53,8 @@ static inline double neg_log_lhood(const double** circs, const double* eq, const
 #define PC_ooD 0
 #define PC_X 1
 #define PC_Y 2
-static inline void calc_com_tan_precalcs(const double **extr_circs, double* opc){
+static inline void calc_com_tan_precalcs(const double **extr_circs, 
+                                         double* opc){
     double dx,dy;
     dx = extr_circs[1][0] - extr_circs[0][0];
     dy = extr_circs[1][1] - extr_circs[0][1];
@@ -60,7 +70,10 @@ static inline void calc_com_tan_precalcs(const double **extr_circs, double* opc)
 #define BOTI 1
 #define TOPE 2
 #define TOPI 3
-static inline void get_com_tang_eqns(const double **extr_circs, const double* pre_calc, double* out_eqn, int ln_tc){
+static inline void get_com_tang_eqns(const double **extr_circs, 
+                                     const double* pre_calc, 
+                                     double* out_eqn, 
+                                     int ln_tc){
 
     double R,a,b,c,a1,a2,b1,b2,rtr2;
     int k,nr;
@@ -80,8 +93,11 @@ static inline void get_com_tang_eqns(const double **extr_circs, const double* pr
     out_eqn[2] = sqrt(1.0+out_eqn[0]*out_eqn[0]);
 }
 
-static inline void nll_array(const double** circs, const int* tans_betw,
-double** eqn, double* nll, const double* pre_calcs){
+static inline void nll_array(const double** circs, 
+                             const int* tans_betw,
+                             double** eqn, 
+                             double* nll, 
+                             const double* pre_calcs){
 
     const double* extremal_circs[2] = {circs[tans_betw[0]], circs[tans_betw[1]]};
 
@@ -92,7 +108,9 @@ double** eqn, double* nll, const double* pre_calcs){
     return;
 }
 
-static inline bool parse_ev(const unsigned short** ev, const double phi_init, double **out_circs){
+static inline int parse_ev(const unsigned short** ev, 
+                           const double phi_init, 
+                           double **out_circs){
     int e0y = 0;
     int sumy = 0;
     
@@ -106,12 +124,16 @@ static inline bool parse_ev(const unsigned short** ev, const double phi_init, do
         sumy += ev[i][1]*2 + (ev[i][0]%2) - e0y;
     }
     if(abs(sumy)>27){
-        return false;
+        return 0;
     }
-    return true;
+    return 1;
 }
-int min_nll_for_ev(const unsigned short** ev, const double init_phi, const double phi_sig, double* out_min_phi, 
-    double* out_min_alph, opts* opt_b){
+int min_nll_for_ev(const unsigned short** ev, 
+                   const double init_phi, 
+                   const double phi_sig, 
+                   double* out_min_phi, 
+                   double* out_min_alph, 
+                   opts* opt_b){
         
     double c_array[24];
     double* circs[8] = {c_array, c_array+3, c_array+6, c_array+9, c_array+12, c_array+15, c_array+18, c_array+21};
@@ -156,7 +178,8 @@ int min_nll_for_ev(const unsigned short** ev, const double init_phi, const doubl
     
     
     for(size_t i = 0; i < steps; ++i){   
-        nll_array((const double**)circs, btwn, eqns, c_lls, (const double*)pre_calcs);
+        nll_array((const double**)circs, btwn, eqns, c_lls, 
+                    (const double*)pre_calcs);
         for(size_t j = 0; j < 4; ++j){
             if(c_lls[j] < glob_min){
                 glob_min = c_lls[j];
@@ -164,7 +187,7 @@ int min_nll_for_ev(const unsigned short** ev, const double init_phi, const doubl
                 glob_min_talpha = eqns[j][0];
             }
         }
-        circs_change_phi(circs, 8, c_phi + step_size, c_phi);
+        circs_change_phi(circs, c_phi + step_size, c_phi);
         c_phi += step_size;
     }
     *out_min_phi = glob_min_phi;

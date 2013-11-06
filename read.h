@@ -7,17 +7,9 @@
 #include "snow.h"
 #endif
 
-static FILE* f_ptr;
 static int fd;
 static unsigned char* bdata;
 static struct stat stats;
-
-#ifndef BOOLTDEF
-#define BOOLTDEF
-typedef int bool;
-#define false 0;
-#define true 1;
-#endif
 
 // ------------------------START PARSE FUNCS-------------------------
 inline static void get_readout(unsigned short wro, unsigned short *out){
@@ -36,7 +28,7 @@ inline static void parse_event(unsigned char* data, unsigned short* hit){
 // -------------------------END PARSE FUNCS--------------------------
 
 // -------------------------START READ FUNCS-------------------------
-bool stream_init(char *fn){
+int stream_init(char *fn){
 #ifdef WSNOW
     init_with_snow();
 #endif
@@ -44,7 +36,7 @@ bool stream_init(char *fn){
     fd = open(fn, O_RDONLY);
     if( fd == -1 ){
         perror("File is no good:");
-        return false;
+        return 0;
     }   
     
     fstat(fd,&stats);
@@ -52,17 +44,19 @@ bool stream_init(char *fn){
     bdata = mmap(NULL, stats.st_size,PROT_READ,MAP_SHARED,fd,0);
     if(bdata == MAP_FAILED){
         perror("Failed to mmap the file.");
-        return false;
+        return 0;
     }
-    return true;
+    return 1;
 }
-bool stream_close(){
+
+int stream_close(){
     munmap(bdata, stats.st_size);
     close(fd);
     return 1;
 }
+
 static int offset = 0;
-bool get_event(unsigned short** hits){
+int get_event(unsigned short** hits){
 #ifdef WSNOW
     read_with_snow(bdata + offset,16,15000);
 #endif
