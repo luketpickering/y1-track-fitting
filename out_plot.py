@@ -47,11 +47,11 @@ print "trying to plot."
 fig = plt.gcf()
 for c in CA:
     print c
-    c_art = plt.Circle((c[0],c[1]), c[2])
+    c_art = plt.Circle((c[0],c[1]), c[2], color='blue', fill=False)
     fig.gca().add_artist(c_art)
 
 for i, eq in enumerate(eqs):
     print eq
     xy = get_xy_from_m_c(eq)
-    plt.plot(xy[0],xy[1],color=color_ring[i], linewidth=0.2)
+    plt.plot(xy[0],xy[1],color='black', linewidth=0.3)
 plt.savefig('funky.pdf')

@@ -103,3 +103,6 @@ void read_with_snow(const unsigned char* dat, int arsize, int freq){
         }
     }
 }
+void end_snow(){
+    free(snow);
+}

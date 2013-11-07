@@ -2,6 +2,7 @@
 #include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #ifndef OPT_BLOB
 #define OPT_BLOB
@@ -9,10 +10,28 @@ typedef struct _opt{
     double step_size;
     int min_steps;
     char* input_fn;
+    int output_random_soln;
 } opts;
 #endif
 
 const double tdc_to_ns = 0.5;
+
+void print_soln(double** circs, double* eqn){
+    fprintf(stderr,"\n\n=================\n\nRandom Soln\n\nWire read outs.\n");
+        
+    for(size_t i = 0; i < 8; ++i)
+    {
+        fprintf(stderr,"%f\t%f\t%f\n",circs[i][0], circs[i][1],
+                 circs[i][2]);
+    }
+    
+    fprintf(stderr,"%f\t%f\n",eqn[0], eqn[1]);
+    
+    fprintf(stderr,"\n^^ Fitted Track\n\n");
+    
+    
+    fprintf(stderr,"\n\n=================\n\n");
+}
 
 static inline void circs_change_phi(double** circs, 
                                     double new_phi, 
@@ -123,7 +142,7 @@ static inline int parse_ev(const unsigned short** ev,
             e0y = ev[i][1]*2;
         sumy += ev[i][1]*2 + (ev[i][0]%2) - e0y;
     }
-    if(abs(sumy)>27){
+    if(abs(sumy)==28){
         return 0;
     }
     return 1;
@@ -146,7 +165,7 @@ int min_nll_for_ev(const unsigned short** ev,
     
     const double phi_resolution = opt_b->step_size;
     int step_dirn = 1;
-    double search_dist = 5.0;
+    double search_dist = 10.0;
     
     double range[2] = {init_phi - search_dist*phi_sig, init_phi + search_dist*phi_sig};
     range[0] = (range[0] < phi_resolution ) ? phi_resolution : range[0];
@@ -171,6 +190,7 @@ int min_nll_for_ev(const unsigned short** ev,
     double glob_min_talpha;
     double c_lls[4];
     double c_phi = start_phi;
+    double min_eq[2];
     
     double* extremal_circs[2] = {circs[btwn[0]],circs[btwn[1]]};
     double pre_calcs[3];
@@ -185,11 +205,26 @@ int min_nll_for_ev(const unsigned short** ev,
                 glob_min = c_lls[j];
                 glob_min_phi = c_phi;
                 glob_min_talpha = eqns[j][0];
+                min_eq[0] = eqns[j][0];
+                min_eq[1] = eqns[j][1];
             }
         }
         circs_change_phi(circs, c_phi + step_size, c_phi);
         c_phi += step_size;
     }
+    
+#ifndef WSNOW
+    if(opt_b->output_random_soln){
+
+        int r = rand();
+        if(!(r % 100000)){
+            circs_change_phi(circs, glob_min_phi, c_phi);
+            print_soln(circs,min_eq);
+            opt_b->output_random_soln = 0;
+        }
+    }
+#endif
+    
     *out_min_phi = glob_min_phi;
     *out_min_alph = atan(glob_min_talpha);
     return steps;  

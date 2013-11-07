@@ -50,6 +50,9 @@ int stream_init(char *fn){
 }
 
 int stream_close(){
+#ifdef WSNOW
+    end_snow();
+#endif
     munmap(bdata, stats.st_size);
     close(fd);
     return 1;
